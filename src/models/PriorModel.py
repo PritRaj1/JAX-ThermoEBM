@@ -10,8 +10,9 @@ class EBM(nn.Module):
         f = nn.activation.leaky_relu
         z = z.squeeze()
         z = nn.Dense(self.hidden_units)(z)
-        z = self.f(z, self.leak_coef)
+        z = f(z, self.leak_coef)
         z = nn.Dense(self.hidden_units)(z)
-        z = self.f(z, self.leak_coef)
+        z = f(z, self.leak_coef)
         z = nn.Dense(self.output_dim)(z)
-        return z.view(-1, self.output_dim, 1, 1)
+
+        return z.reshape((-1, self.output_dim, 1, 1))

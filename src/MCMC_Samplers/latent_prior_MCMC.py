@@ -33,6 +33,6 @@ class prior_sampler(Langevin_Sampler):
         """Sample from simple prior distribution, p0(z) = N(0, p0_sigma)"""
 
         key, subkey = jax.random.split(key)
-        return self.p0_sig * jax.random.normal(subkey, (self.batch_size, self.num_z, 1, 1))
+        return self.p0_sig * jax.random.normal(subkey, (self.batch_size, self.num_z, 1, 1)), key
 
 

@@ -2,8 +2,10 @@ import sys; sys.path.append('..')
 import torch
 import optax
 import jax
+import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import tqdm
+from torch.utils.data import DataLoader
 
 from src.pipeline.train_state import Train_State
 from src.models.PriorModel import EBM
@@ -17,24 +19,41 @@ config = parse_input_file('hyperparams.input')
 
 dataset, val_dataset, config['IMAGE_DIM'] = get_data(config['DATASET'])
 
+# Convert the config values to the correct type
+config.pop('DATASET')
+for key, value in config.items():
+    try:
+        config[key] = int(value)
+    except:
+        try:
+            config[key] = float(value)
+        except:
+            try:
+                config[key] = eval(value)
+            except:
+                pass
+
 print(config)
 
 # Take a subset of the dataset
-train_data = torch.utils.data.Subset(dataset, config['NUM_TRAIN_DATA'])
-val_data = torch.utils.data.Subset(val_dataset, config['NUM_VAL_DATA'])
+train_data = torch.utils.data.Subset(dataset, range(config['NUM_TRAIN_DATA']))
+val_data = torch.utils.data.Subset(val_dataset, range(config['NUM_VAL_DATA']))
+
+# Split dataset
+test_loader = DataLoader(train_data, batch_size=config['BATCH_SIZE'], shuffle=True)
+val_loader = DataLoader(val_data, batch_size=config['BATCH_SIZE'], shuffle=False)
 
 rng = jax.random.PRNGKey(0)
 
 # Create the EBM model
 EBM_model = EBM(
-    hidden_dim=config['EBM_FEATURE_DIM'], 
+    hidden_units=config['EBM_FEATURE_DIM'], 
     output_dim=config['EMB_OUT_SIZE'],
     leak_coef=config['EBM_LEAK']
     )
 
 # Create the Generator model
 GEN_model = GEN(
-    input_dim=config['EMB_OUT_SIZE'],
     feature_dim=config['GEN_FEATURE_DIM'], 
     output_dim=config['CHANNELS'],
     image_dim=config['IMAGE_DIM'],
@@ -44,14 +63,14 @@ GEN_model = GEN(
 # Create the optimisers
 E_schedule = optax.exponential_decay(
     init_value=config['E_LR'], 
-    decay_steps=config['E_STEPS'], 
+    transition_steps=config['E_STEPS'], 
     decay_rate=config['E_GAMMA']
     )
 EBM_optimiser = optax.adam(learning_rate=E_schedule)
 
 G_schedule = optax.exponential_decay(
     init_value=config['G_LR'], 
-    decay_steps=config['G_STEPS'], 
+    transition_steps=config['G_STEPS'], 
     decay_rate=config['G_GAMMA']
     )
 GEN_optimiser = optax.adam(learning_rate=G_schedule)
@@ -89,19 +108,21 @@ tqdm_bar = tqdm.tqdm(range(config['NUM_EPOCHS']))
 for epoch in tqdm_bar:
     train_loss = 0
 
-    for i, batch in enumerate(train_data):
-        train_loss += state.train_step(batch)
+    for batch in test_loader:
+        x = jnp.array(batch[0].numpy())
+        train_loss += state.training_step(x)
 
-    print(f'Epoch: {epoch}, Loss: {train_loss / len(train_data)}')
+    tqdm_bar.set_postfix({'train_loss': train_loss})
 
     if epoch % config['VAL_EVERY'] == 0:
         val_loss = 0
-        for i, batch in enumerate(val_data):
-            val_loss += state.val_step(batch)
+        for batch in val_loader:
+            x = jnp.array(batch[0].numpy())
+            val_loss += state.validation_step(x)
+        tqdm_bar.set_postfix({'train_loss': train_loss, 'val_loss': val_loss})
 
-        print(f'Validation Loss: {val_loss / len(val_data)}')
-
-generated_image = generate(state)[0]
+# Generate an image
+generated_image = generate(state, rng)
 
 # Plot the generated image
 plt.figure()

@@ -1,5 +1,8 @@
 
 from torchvision import datasets, transforms
+import jax
+import numpy
+import jax.numpy as jnp
 
 
 def parse_input_file(input_file='hyperparams.input'):
@@ -14,14 +17,17 @@ def parse_input_file(input_file='hyperparams.input'):
             config[key.strip()] = value.strip()
     return config
 
+
 def get_data(name):
 
     img_dim = 64 if name == 'CelebA' else 32
 
+    import jax.numpy as jnp
+
     transform = transforms.Compose([
             transforms.Resize((img_dim, img_dim)),  # Resize the images to defined resolution
             transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize the image tensors
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),  # Normalize the image tensors
             ])
     
     if name == 'CIFAR10':

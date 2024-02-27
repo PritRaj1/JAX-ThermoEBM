@@ -24,8 +24,8 @@ E_LR = 0.0002
 G_LR = 0.001
 E_GAMMA = 0.998
 G_GAMMA = 0.998
-E_STEPS = [60]
-G_STEPS = [20, 40]
+E_STEPS = 20
+G_STEPS = 20
 
 # Langevin MCMC
 E_STEP = 0.4

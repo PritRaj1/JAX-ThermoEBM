@@ -7,14 +7,14 @@ class Langevin_Sampler():
         self.K = num_steps
         self.grad_log_fcn = None
 
-    def __call__(self, x, state, key, data=None):
+    def __call__(self, x, state, key, data=None, t=None):
         """
         Estimate a sample from the target distribution using Langevin MCMC.
         """
         for k in range(self.K):
             
             # Deterministic Gradient Step
-            x += (self.s * self.grad_log_fcn(x, state, data))
+            x += (self.s * self.grad_log_fcn(x, state, data, t))
 
             # Stochastic Noise Step
             key, subkey = jax.random.split(key)

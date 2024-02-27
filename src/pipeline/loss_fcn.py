@@ -63,9 +63,9 @@ class discretised_TI_loss_fcn():
 
         # Thermodynamic Integration Loop
         for idx, t in enumerate(temp_schedule):
-            state.temp['current'] = t
 
-            z_prior, z_posterior = sample_z(state, data)
+            z_0 = state.samplers['prior'].sample_p0(state.key)
+            z_prior, z_posterior = sample_z(state, data, t)
 
             # If the loss is for the generator model, y = x
             y = data if self.is_gen else z_prior

@@ -1,6 +1,6 @@
 import jax
 
-def sample_z(state, data):
+def sample_z(state, z0, data, t):
 
     # Parse samplers
     prior_sampler = state.samplers['prior']
@@ -8,12 +8,10 @@ def sample_z(state, data):
 
     # Initialise noisy sample
     key, subkey = jax.random.split(state.key)
-    z0 = prior_sampler.sample_p0(subkey) # z0 ~ p_0(z)
-    state.key = key
 
     # MCMC sampling to generate zK
-    zK_prior = prior_sampler(z0, state, key) # zK ~ p_a(z)
-    zK_posterior = posterior_sampler(z0, state, key, data) # zK ~ p_θ(z|x)
+    zK_prior = prior_sampler(z0, state, subkey) # zK ~ p_a(z)
+    zK_posterior = posterior_sampler(z0, state, subkey, data, t) # zK ~ p_θ(z|x)
 
     return zK_prior, zK_posterior
 
