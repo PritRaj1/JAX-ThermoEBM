@@ -3,3 +3,6 @@ jax[cuda12_pip]==0.4.26
 flax
 optax
 torchvision
+matplotlib
+tqdm
+

@@ -32,10 +32,18 @@ def gen_loss(state, x, z):
     return log_lkhood 
 
 class discretised_TI_loss_fcn():
-    def __init__(self, loss_fcn):
-        self.loss_fcn = loss_fcn
+    def __init__(self, loss_fcn, gen=False):
+        """
+        Class to compute the loss using Thermodynamic Integration.
 
-    def __call__(self, state, y, z_posterior)
+        Args:
+        - loss_fcn: the loss function to be used for the model
+        - gen: boolean to indicate if the loss is for the generator model
+        """
+        self.loss_fcn = loss_fcn
+        self.is_gen = gen
+
+    def __call__(self, state, data):
         """
         Function to compute the loss using Thermodynamic Integration.
         Please see "discretised thermodynamic integration" using trapezoid rule
@@ -57,7 +65,10 @@ class discretised_TI_loss_fcn():
         for idx, t in enumerate(temp_schedule):
             state.temp['current'] = t
 
-            z_prior, z_posterior = sample_z(state, y)
+            z_prior, z_posterior = sample_z(state, data)
+
+            # If the loss is for the generator model, y = x
+            y = data if self.is_gen else z_prior
 
             loss_current = self.loss_fcn(state, y, z_posterior)
 

@@ -66,4 +66,4 @@ def get_data(name):
     else:
         raise ValueError("Invalid dataset name.")
     
-    return dataset, val_dataset, img_dim
+    return dataset, val_dataset, str(img_dim)

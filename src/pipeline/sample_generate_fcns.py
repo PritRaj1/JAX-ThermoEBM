@@ -16,3 +16,17 @@ def sample_z(state, data):
     zK_posterior = posterior_sampler(z0, state, key, data) # zK ~ p_θ(z|x)
 
     return zK_prior, zK_posterior
+
+def generate(state):
+
+    prior_sampler = state.samplers['prior']
+
+    key, subkey = jax.random.split(state.key)
+    z0 = prior_sampler.sample_p0(subkey)
+    state.key = key
+
+    z_prior = prior_sampler(z0, state, key)
+
+    x_pred = state.model_apply['GEN_apply'](state.params['GEN_params'], jax.lax.stop_gradient(z_prior))
+
+    return x_pred

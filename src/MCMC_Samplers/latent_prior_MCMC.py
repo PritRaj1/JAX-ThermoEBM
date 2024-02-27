@@ -4,7 +4,7 @@ import jax
 import jax.numpy as jnp
 
 class prior_sampler(Langevin_Sampler):
-    def __init__(self, step_size, num_steps, p0_sigma, num_z, batch_size, EBM_model):
+    def __init__(self, step_size, num_steps, p0_sigma, num_z, batch_size):
         super().__init__(step_size, num_steps)
         self.p0_sig = p0_sigma
         self.num_z = num_z
