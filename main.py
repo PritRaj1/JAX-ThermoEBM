@@ -2,7 +2,6 @@ import sys; sys.path.append('..')
 import torch
 import optax
 import jax
-import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import tqdm
 

@@ -1,10 +1,10 @@
 import jax
-import jnp
+import jax.numpy as jnp
 import optax
-from lightning.pytorch.loggers import TensorBoardLogger, CSVLogger
+# from lightning.pytorch.loggers import TensorBoardLogger, CSVLogger
 
 from src.pipeline.sample_generate_fcns import sample_z
-from src.pipeline.loss_fcn import discretised_TI_loss_fcn, EBM_loss, GEN_loss
+from src.pipeline.loss_fcn import discretised_TI_loss_fcn, ebm_loss, gen_loss
 
 class Train_State():
     def __init__(self, 
@@ -75,6 +75,7 @@ class Train_State():
             "csv_logger": None
         }
 
+    @jax.jit
     def training_step(self, batch):
 
         x, _ = batch
@@ -100,6 +101,7 @@ class Train_State():
         
         return loss_ebm.mean() + loss_gen.mean()
     
+    @jax.jit
     def validation_step(self, batch):
         x, _ = batch
 
