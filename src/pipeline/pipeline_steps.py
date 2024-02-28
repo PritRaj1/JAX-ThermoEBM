@@ -64,7 +64,7 @@ def get_losses(
     return key, loss_ebm, grad_ebm, loss_gen, grad_gen
 
 
-@jax.jit
+@partial(jax.jit, static_argnums=(6,7))
 def update_params(
     EBM_params,
     EBM_opt_state,

@@ -8,11 +8,16 @@ import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import tqdm
 from torch.utils.data import DataLoader
+import os
 
 from src.pipeline.LatentEBM_Trainer import Trainer
 from src.utils.helper_functions import parse_input_file, get_data
 
 print(f"Device: {jax.default_backend()}")
+
+os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"]="false"
+os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"]=".70"
+os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"]="platform"
 
 config = parse_input_file("hyperparams.input")
 

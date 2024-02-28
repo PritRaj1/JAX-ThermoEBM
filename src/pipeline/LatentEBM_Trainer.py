@@ -16,7 +16,7 @@ from pypapi import events, papi_high as high
 
 from src.pipeline.pipeline_steps import get_losses, update_params
 from src.models.PriorModel import EBM
-from src.models.GeneratorModel import GEN_64, GEN_32
+from src.models.GeneratorModel import GEN_64, GEN_32, GEN
 from src.MCMC_Samplers.sample_distributions import sample_p0, sample_prior
 from src.pipeline.loss_fcn import TI_GEN_loss_fcn
 
@@ -90,20 +90,12 @@ class Trainer:
         GEN_init_key = jax.random.PRNGKey(0)
 
         # Create the Generator model
-        if self.config["IMAGE_DIM"] == 64:
-            GEN_model = GEN_64(
-                feature_dim=self.config["GEN_FEATURE_DIM"],
-                output_dim=self.config["CHANNELS"],
-                image_dim=self.config["IMAGE_DIM"],
-                leak_coef=self.config["GEN_LEAK"],
-            )
-        else:
-            GEN_model = GEN_32(
-                feature_dim=self.config["GEN_FEATURE_DIM"],
-                output_dim=self.config["CHANNELS"],
-                image_dim=self.config["IMAGE_DIM"],
-                leak_coef=self.config["GEN_LEAK"],
-            )
+        GEN_model = GEN(
+            feature_dim=self.config["GEN_FEATURE_DIM"],
+            output_dim=self.config["CHANNELS"],
+            image_dim=self.config["IMAGE_DIM"],
+            leak_coef=self.config["GEN_LEAK"],
+        )
 
         self.key, z_init = sample_p0(
             self.key,
@@ -111,7 +103,7 @@ class Trainer:
             self.config["BATCH_SIZE"],
             self.config["NUM_Z"],
         )
-        
+
         # Initialise the Generator model
         GEN_params = GEN_model.init(GEN_init_key, z_init)
 
@@ -134,7 +126,9 @@ class Trainer:
                     self.config["TEMP_POWER"]
                 )
             )
-            temp = tuple(np.linspace(0, 1, self.config["NUM_TEMPS"]) ** self.config["TEMP_POWER"])
+            temp = tuple(
+                np.linspace(0, 1, self.config["NUM_TEMPS"]) ** self.config["TEMP_POWER"]
+            )
 
         else:
             print("Using no thermodynamic integration, defaulting to Vanilla Model")
@@ -166,14 +160,7 @@ class Trainer:
 
         # Get the losses
         self.key, loss_ebm, grad_ebm, loss_gen, grad_gen = get_losses(
-            key,
-            x,
-            EBM_fwd,
-            EBM_params,
-            GEN_fwd,
-            GEN_params,
-            *hyperparams_list,
-            t
+            key, x, EBM_fwd, EBM_params, GEN_fwd, GEN_params, *hyperparams_list, t
         )
 
         # Update the parameters
@@ -190,11 +177,19 @@ class Trainer:
 
         total_loss = loss_ebm.mean() + loss_gen.mean()
 
+        # Get gradients from grad dictionaries
+        grad_ebm_values = jax.tree_util.tree_flatten(grad_ebm)[0]
+        grad_gen_values = jax.tree_util.tree_flatten(grad_gen)[0]   
+
+        # Flatten the gradients
+        grad_ebm_values = jnp.concatenate([jnp.ravel(g) for g in grad_ebm_values])
+        grad_gen_values = jnp.concatenate([jnp.ravel(g) for g in grad_gen_values])
+
         self.tb_writer.add_scalar("train_Loss/EBM", loss_ebm.mean(), epoch)
         self.tb_writer.add_scalar("train_Loss/GEN", loss_gen.mean(), epoch)
         self.tb_writer.add_scalar("train_total_loss", total_loss, epoch)
-        self.tb_writer.add_scalar("train_var_grad/EBM", jnp.var(grad_ebm), epoch)
-        self.tb_writer.add_scalar("train_var_grad/GEN", jnp.var(grad_gen), epoch)
+        self.tb_writer.add_scalar("train_var_grad/EBM", jnp.var(grad_ebm_values), epoch)
+        self.tb_writer.add_scalar("train_var_grad/GEN", jnp.var(grad_gen_values), epoch)
 
         new_EBM_list = [EBM_fwd, EBM_params, EBM_optimiser, EBM_opt_state]
         new_GEN_list = [GEN_fwd, GEN_params, GEN_optimiser, GEN_opt_state]
@@ -213,23 +208,24 @@ class Trainer:
 
         # Get the losses
         self.key, loss_ebm, grad_ebm, loss_gen, grad_gen = get_losses(
-            key,
-            x,
-            EBM_fwd,
-            EBM_params,
-            GEN_fwd,
-            GEN_params,
-            *hyperparams_list,
-            t
+            key, x, EBM_fwd, EBM_params, GEN_fwd, GEN_params, *hyperparams_list, t
         )
 
         total_loss = loss_ebm.mean() + loss_gen.mean()
 
+        # Get gradients from grad dictionaries
+        grad_ebm_values = jax.tree_util.tree_flatten(grad_ebm)[0]
+        grad_gen_values = jax.tree_util.tree_flatten(grad_gen)[0]
+
+        # Flatten the gradients
+        grad_ebm_values = jnp.concatenate([jnp.ravel(g) for g in grad_ebm_values])
+        grad_gen_values = jnp.concatenate([jnp.ravel(g) for g in grad_gen_values])
+
         self.tb_writer.add_scalar("val_Loss/EBM", loss_ebm.mean(), epoch)
         self.tb_writer.add_scalar("val_Loss/GEN", loss_gen.mean(), epoch)
         self.tb_writer.add_scalar("val_total_loss", total_loss, epoch)
-        self.tb_writer.add_scalar("val_var_grad/EBM", jnp.var(grad_ebm), epoch)
-        self.tb_writer.add_scalar("val_var_grad/GEN", jnp.var(grad_gen), epoch)
+        self.tb_writer.add_scalar("val_var_grad/EBM", jnp.var(grad_ebm_values), epoch)
+        self.tb_writer.add_scalar("val_var_grad/GEN", jnp.var(grad_gen_values), epoch)
 
         self.key, generated_data = self.generate()
         self.log_image_metrics(x, generated_data, epoch)

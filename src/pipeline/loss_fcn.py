@@ -175,9 +175,11 @@ def TI_GEN_loss_fcn(
 
     for i in range(1, len(temp_schedule)):
 
+        z_posterior_t = z_posterior[i - 1]
+
         # MSE between g(z) and x, where z ~ p_θ(z|x, t)
         key, loss_current = gen_loss(
-            key, x, z_posterior[i - 1], GEN_fwd, GEN_params, pl_sig
+            key, x, z_posterior_t, GEN_fwd, GEN_params, pl_sig
         )
 
         # ∇T = t_i - t_{i-1}
