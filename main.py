@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import tqdm
 from torch.utils.data import DataLoader
 
-from src.pipeline import Trainer
+from src.pipeline.LatentEBM_Trainer import Trainer
 from src.utils.helper_functions import parse_input_file, get_data
 
 config = parse_input_file('hyperparams.input')
@@ -18,10 +18,10 @@ dataset, val_dataset, config['IMAGE_DIM'] = get_data(config['DATASET'])
 config.pop('DATASET')
 for key, value in config.items():
     try:
-        config[key] = int(value)
+        config[key] = jnp.int32(value)
     except:
         try:
-            config[key] = float(value)
+            config[key] = jnp.float32(value)
         except:
             try:
                 config[key] = eval(value)
@@ -40,7 +40,7 @@ val_loader = DataLoader(val_data, batch_size=config['BATCH_SIZE'], shuffle=False
 
 rng = jax.random.PRNGKey(0)
 
-Trainer = Trainer(config)
+Trainer = Trainer(config, 'logs/')
 
 # Train the model
 tqdm_bar = tqdm.tqdm(range(config['NUM_EPOCHS']))

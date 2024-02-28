@@ -5,6 +5,6 @@ optax
 matplotlib
 tqdm
 seaborn
-tensorboardX
+tensorboard
 torchmetrics
-pypapi
+python-papi

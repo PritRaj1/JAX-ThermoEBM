@@ -10,7 +10,7 @@ from torchmetrics.image.fid import FrechetInceptionDistance
 from torchmetrics.image.kid import KernelInceptionDistance
 from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
 
-from src.pipeline.train_steps import train_ebm_step, train_gen_step
+from src.pipeline.pipeline_steps import get_losses, updara_params
 from src.pipeline.validation_steps import val_ebm_step, val_gen_step
 from src.models.PriorModel import EBM
 from src.models.GeneratorModel import GEN
@@ -38,7 +38,7 @@ class Trainer():
 
         z_init = sample_p0(
             self.key, 
-            self.config['P0_SIG'], 
+            self.config['p0_SIGMA'], 
             self.config['BATCH_SIZE'], 
             self.config['NUM_Z']
         )
@@ -105,43 +105,36 @@ class Trainer():
 
     def train(self, x, epoch):
 
-        # Train the EBM
-        self.key, self.EBM_params, self.EBM_opt_state, loss_ebm, grad_ebm = train_ebm_step(
-                                                                                    self.key, 
-                                                                                    x, 
-                                                                                    self.EBM_fwd, 
-                                                                                    self.EBM_params, 
-                                                                                    self.GEN_fwd, 
-                                                                                    self.GEN_params, 
-                                                                                    self.config['PL_SIG'], 
-                                                                                    self.config['P0_SIG'], 
-                                                                                    self.config['E_STEP'], 
-                                                                                    self.config['E_SAMPLE_STEPS'], 
-                                                                                    self.config['BATCH_SIZE'], 
-                                                                                    self.config['NUM_Z'], 
-                                                                                    self.temp['schedule'], 
-                                                                                    self.EBM_optimiser, 
-                                                                                    self.EBM_opt_state
-                                                                                )
+        # Get the losses
+        self.key, loss_ebm, grad_ebm, loss_gen, grad_gen = get_losses(
+            self.key,
+            x,
+            self.EBM_fwd,
+            self.EBM_params,
+            self.GEN_fwd,
+            self.GEN_params,
+            self.config['LKHOOD_SIGMA'],
+            self.config['p0_SIGMA'],
+            self.config['E_STEP_SIZE'],
+            self.config['E_SAMPLE_STEPS'],
+            self.config['G_STEP_SIZE'],
+            self.config['G_SAMPLE_STEPS'],
+            self.config['BATCH_SIZE'],
+            self.config['NUM_Z'],
+            self.temp['schedule']
+        )
 
-        # Train the Generator
-        self.key, self.GEN_params, self.GEN_opt_state, loss_gen, grad_gen = train_gen_step(
-                                                                                    self.key, 
-                                                                                    x, 
-                                                                                    self.EBM_fwd, 
-                                                                                    self.EBM_params, 
-                                                                                    self.GEN_fwd, 
-                                                                                    self.GEN_params, 
-                                                                                    self.config['PL_SIG'], 
-                                                                                    self.config['P0_SIG'], 
-                                                                                    self.config['G_STEP'], 
-                                                                                    self.config['G_SAMPLE_STEPS'], 
-                                                                                    self.config['BATCH_SIZE'], 
-                                                                                    self.config['NUM_Z'], 
-                                                                                    self.temp['schedule'], 
-                                                                                    self.GEN_optimiser, 
-                                                                                    self.GEN_opt_state
-                                                                                )
+        # Update the parameters
+        self.EBM_params, self.EBM_opt_state, self.GEN_params, self.GEN_opt_state = updara_params(
+            self.EBM_params,
+            self.EBM_opt_state,
+            self.GEN_params,
+            self.GEN_opt_state,
+            grad_ebm,
+            grad_gen,
+            self.EBM_optimiser,
+            self.GEN_optimiser
+        )
 
         total_loss = loss_ebm.mean() + loss_gen.mean()
 
@@ -155,41 +148,24 @@ class Trainer():
     
     def validate(self, x, epoch):
             
-            self.key, loss_ebm, grad_ebm = val_ebm_step(
-                                                        self.key, 
-                                                        x, 
-                                                        self.EBM_fwd, 
-                                                        self.EBM_params, 
-                                                        self.GEN_fwd, 
-                                                        self.GEN_params, 
-                                                        self.config['PL_SIG'], 
-                                                        self.config['P0_SIG'], 
-                                                        self.config['E_STEP'], 
-                                                        self.config['E_SAMPLE_STEPS'], 
-                                                        self.config['BATCH_SIZE'], 
-                                                        self.config['NUM_Z'], 
-                                                        self.temp['schedule'], 
-                                                        self.EBM_optimiser, 
-                                                        self.EBM_opt_state
-                                                    )
-    
-            self.key, loss_gen, grad_gen = val_gen_step(
-                                                        self.key, 
-                                                        x, 
-                                                        self.EBM_fwd, 
-                                                        self.EBM_params, 
-                                                        self.GEN_fwd, 
-                                                        self.GEN_params, 
-                                                        self.config['PL_SIG'], 
-                                                        self.config['P0_SIG'], 
-                                                        self.config['G_STEP'], 
-                                                        self.config['G_SAMPLE_STEPS'], 
-                                                        self.config['BATCH_SIZE'], 
-                                                        self.config['NUM_Z'], 
-                                                        self.temp['schedule'], 
-                                                        self.GEN_optimiser, 
-                                                        self.GEN_opt_state
-                                                    )
+            # Get the losses
+            self.key, loss_ebm, grad_ebm, loss_gen, grad_gen = get_losses(
+                self.key,
+                x,
+                self.EBM_fwd,
+                self.EBM_params,
+                self.GEN_fwd,
+                self.GEN_params,
+                self.config['LKHOOD_SIGMA'],
+                self.config['p0_SIGMA'],
+                self.config['E_STEP'],
+                self.config['E_SAMPLE_STEPS'],
+                self.config['G_STEP_SIZE'],
+                self.config['G_SAMPLE_STEPS'],
+                self.config['BATCH_SIZE'],
+                self.config['NUM_Z'],
+                self.temp['schedule']
+            )
     
             total_loss = loss_ebm.mean() + loss_gen.mean()
     
@@ -207,7 +183,7 @@ class Trainer():
     def generate(self):
         key, z_prior = sample_prior(
                                 self.key, 
-                                self.config['P0_SIG'], 
+                                self.config['p0_SIGMA'], 
                                 self.config['BATCH_SIZE'], 
                                 self.config['NUM_Z']
                             )
@@ -258,9 +234,9 @@ class Trainer():
                                     self.EBM_params, 
                                     self.GEN_fwd, 
                                     self.GEN_params, 
-                                    self.config['PL_SIG'], 
-                                    self.config['P0_SIG'], 
-                                    self.config['G_STEP'], 
+                                    self.config['LKHOOD_SIGMA'], 
+                                    self.config['p0_SIGMA'], 
+                                    self.config['G_STEP_SIZE'], 
                                     self.config['G_SAMPLE_STEPS'], 
                                     self.config['BATCH_SIZE'], 
                                     self.config['NUM_Z'], 
