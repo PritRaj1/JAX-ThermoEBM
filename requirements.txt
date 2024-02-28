@@ -4,7 +4,7 @@ torchvision
 torch-fidelity
 torchmetrics
 pytorch-lightning
-jax[cuda12_pip]
+jax[cuda11_pip]
 flax[all]
 optax
 matplotlib
