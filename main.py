@@ -1,4 +1,10 @@
 import sys
+import os
+
+os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"]="False"
+os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"]="0.8"
+os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"]="platform"
+os.environ["XLA_FLAGS"]="--xla_gpu_strict_conv_algorithm_picker=false"
 
 sys.path.append("..")
 import torch
@@ -8,16 +14,16 @@ import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import tqdm
 from torch.utils.data import DataLoader
-import os
 
 from src.pipeline.LatentEBM_Trainer import Trainer
 from src.utils.helper_functions import parse_input_file, get_data
 
-print(f"Device: {jax.default_backend()}")
+print(os.environ["XLA_FLAGS"], 
+      os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"], 
+      os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"], 
+      os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"])
 
-os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"]="false"
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"]=".70"
-os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"]="platform"
+print(f"Device: {jax.default_backend()}")
 
 config = parse_input_file("hyperparams.input")
 
