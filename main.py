@@ -30,7 +30,8 @@ for key, value in config.items():
             except:
                 pass
 
-print(config)
+for key, value in config.items():
+    print(f"{key}: {value}")
 
 # Take a subset of the dataset
 train_data = torch.utils.data.Subset(dataset, range(config["NUM_TRAIN_DATA"]))

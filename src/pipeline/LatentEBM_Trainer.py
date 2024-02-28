@@ -6,11 +6,11 @@ from tensorboardX import SummaryWriter
 from torchvision.utils import make_grid
 
 # Metrics
-from pypapi import events, papi_high as high
 from torchmetrics.image.fid import FrechetInceptionDistance
 from torchmetrics.image.mifid import MemorizationInformedFrechetInceptionDistance
 from torchmetrics.image.kid import KernelInceptionDistance
 from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
+from pypapi import events, papi_high as high
 
 from src.pipeline.pipeline_steps import get_losses, updara_params
 from src.models.PriorModel import EBM
@@ -42,7 +42,7 @@ class Trainer():
 
         self.tb_writer = SummaryWriter(log_path)
         self.csv_logger = None
-
+        
         self.fid = FrechetInceptionDistance(feature=64, normalize=True) # FID metric
         self.mifid = MemorizationInformedFrechetInceptionDistance(feature=64, normalize=True) # MI-FID metric
         self.kid = KernelInceptionDistance(feature=64, subset_size=config['BATCH_SIZE'], normalize=True) # KID metric

@@ -3,11 +3,12 @@ torch
 torchvision
 torch-fidelity
 torchmetrics
+pytorch-lightning
 jax[cuda12_pip]
 flax[all]
 optax
 matplotlib
 tqdm
 seaborn
-tensorboard
+tensorboardX
 python-papi
