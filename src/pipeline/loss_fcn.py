@@ -4,6 +4,7 @@ from functools import partial
 
 from src.MCMC_Samplers.sample_distributions import sample_prior, sample_posterior
 
+
 def ebm_loss(z_prior, z_posterior, EBM_fwd, EBM_params):
     """
     Function to compute energy-difference loss for the EBM model.
@@ -16,7 +17,8 @@ def ebm_loss(z_prior, z_posterior, EBM_fwd, EBM_params):
     en_neg = EBM_fwd(EBM_params, z_prior)
 
     # Return the difference in energies
-    return (en_pos - en_neg)
+    return en_pos - en_neg
+
 
 def gen_loss(key, x, z, GEN_fwd, GEN_params, pl_sig):
     """
@@ -26,27 +28,29 @@ def gen_loss(key, x, z, GEN_fwd, GEN_params, pl_sig):
     # Compute -log[ p_β(x | z) ]; max likelihood training
     key, subkey = jax.random.split(key)
     x_pred = GEN_fwd(GEN_params, z) + (pl_sig * jax.random.normal(subkey, x.shape))
-    log_lkhood = (jax.linalg.norm(x-x_pred, axis=-1)**2) / (2.0 * pl_sig**2)
+    log_lkhood = (jax.linalg.norm(x - x_pred, axis=-1) ** 2) / (2.0 * pl_sig**2)
 
     return key, log_lkhood
 
-@partial(jax.jit, static_argnums=(2,4,6,7,8,9,10,11,12))
-def TI_EBM_loss_fcn(key, 
-                    x, 
-                    EBM_fwd, 
-                    EBM_params, 
-                    GEN_fwd, 
-                    GEN_params, 
-                    pl_sig, 
-                    p0_sig, 
-                    step_size, 
-                    num_steps, 
-                    batch_size, 
-                    num_z, 
-                    temp_schedule):
+
+def TI_EBM_loss_fcn(
+    key,
+    x,
+    EBM_fwd,
+    EBM_params,
+    GEN_fwd,
+    GEN_params,
+    pl_sig,
+    p0_sig,
+    step_size,
+    num_steps,
+    batch_size,
+    num_z,
+    temp_schedule,
+):
     """
     Function to compute the energy-based model loss using Thermodynamic Integration.
-    
+
     Please see "discretised thermodynamic integration" using trapezoid rule
     in https://doi.org/10.1016/j.csda.2009.07.025 for details.
 
@@ -74,56 +78,55 @@ def TI_EBM_loss_fcn(key,
     total_loss = 0
 
     # Generate z_posterior for all temperatures
-    key, z_posterior = sample_posterior(key, 
-                                        x,
-                                        EBM_fwd, 
-                                        EBM_params, 
-                                        GEN_fwd, 
-                                        GEN_params, 
-                                        pl_sig, 
-                                        p0_sig, 
-                                        step_size, 
-                                        num_steps, 
-                                        batch_size, 
-                                        num_z,
-                                        temp_schedule)
+    key, z_posterior = sample_posterior(
+        key,
+        x,
+        EBM_fwd,
+        EBM_params,
+        GEN_fwd,
+        GEN_params,
+        pl_sig,
+        p0_sig,
+        step_size,
+        num_steps,
+        batch_size,
+        num_z,
+        temp_schedule,
+    )
 
-    for i in range(1, len(temp_schedule)+1):
-        key, z_prior = sample_prior(key, 
-                                    EBM_fwd,
-                                    EBM_params, 
-                                    p0_sig, 
-                                    step_size, 
-                                    num_steps, 
-                                    batch_size, 
-                                    num_z)
-        
-        z_posterior_t = z_posterior[i-1]
+    for i in range(1, len(temp_schedule) + 1):
+        key, z_prior = sample_prior(
+            key, EBM_fwd, EBM_params, p0_sig, step_size, num_steps, batch_size, num_z
+        )
+
+        z_posterior_t = z_posterior[i - 1]
 
         loss_current = ebm_loss(z_prior, z_posterior_t, EBM_fwd, EBM_params)
 
         # ∇T = t_i - t_{i-1}
-        delta_T = temp_schedule[i] - temp_schedule[i-1]
+        delta_T = temp_schedule[i] - temp_schedule[i - 1]
 
         # # 1/2 * (f(x_i) + f(x_{i-1})) * ∇T
-        total_loss += (0.5 * (loss_current + total_loss) * delta_T)
+        total_loss += 0.5 * (loss_current + total_loss) * delta_T
 
     return total_loss, key
 
-@partial(jax.jit, static_argnums=(2,4,6,7,8,9,10,11,12))
-def TI_GEN_loss_fcn(key, 
-                    x, 
-                    EBM_fwd, 
-                    EBM_params, 
-                    GEN_fwd, 
-                    GEN_params, 
-                    pl_sig, 
-                    p0_sig, 
-                    step_size, 
-                    num_steps, 
-                    batch_size, 
-                    num_z, 
-                    temp_schedule):
+
+def TI_GEN_loss_fcn(
+    key,
+    x,
+    EBM_fwd,
+    EBM_params,
+    GEN_fwd,
+    GEN_params,
+    pl_sig,
+    p0_sig,
+    step_size,
+    num_steps,
+    batch_size,
+    num_z,
+    temp_schedule,
+):
     """
     Function to compute the generator loss using Thermodynamic Integration.
 
@@ -141,7 +144,7 @@ def TI_GEN_loss_fcn(key,
     - batch_size: batch size, --immutable
     - num_z: number of latent space variables, --immutable
     - temp_schedule: temperature schedule, --immutable
-    
+
     Returns:
     - total_loss: the total loss for the entire thermodynamic integration loop, log(p_β(x | z))
     """
@@ -152,30 +155,33 @@ def TI_GEN_loss_fcn(key,
     total_loss = 0
 
     # Generate z_posterior for all temperatures
-    key, z_posterior = sample_posterior(key, 
-                                        x,
-                                        EBM_fwd, 
-                                        EBM_params, 
-                                        GEN_fwd, 
-                                        GEN_params, 
-                                        pl_sig, 
-                                        p0_sig, 
-                                        step_size, 
-                                        num_steps, 
-                                        batch_size, 
-                                        num_z,
-                                        temp_schedule)
-    
-    for i in range(1, len(temp_schedule)+1):
-        
+    key, z_posterior = sample_posterior(
+        key,
+        x,
+        EBM_fwd,
+        EBM_params,
+        GEN_fwd,
+        GEN_params,
+        pl_sig,
+        p0_sig,
+        step_size,
+        num_steps,
+        batch_size,
+        num_z,
+        temp_schedule,
+    )
+
+    for i in range(1, len(temp_schedule) + 1):
+
         # MSE between g(z) and x, where z ~ p_θ(z|x, t)
-        key, loss_current = gen_loss(key, x, z_posterior[i-1], GEN_fwd, GEN_params, pl_sig)
+        key, loss_current = gen_loss(
+            key, x, z_posterior[i - 1], GEN_fwd, GEN_params, pl_sig
+        )
 
         # ∇T = t_i - t_{i-1}
-        delta_T = temp_schedule[i] - temp_schedule[i-1]
+        delta_T = temp_schedule[i] - temp_schedule[i - 1]
 
         # # 1/2 * (f(x_i) + f(x_{i-1})) * ∇T
-        total_loss += (0.5 * (loss_current + total_loss) * delta_T)
+        total_loss += 0.5 * (loss_current + total_loss) * delta_T
 
     return total_loss, key
-

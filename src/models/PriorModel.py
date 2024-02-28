@@ -1,5 +1,6 @@
 import flax.linen as nn
 
+
 class EBM(nn.Module):
     hidden_units: int
     output_dim: int
