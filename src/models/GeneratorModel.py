@@ -8,21 +8,23 @@ class GEN(nn.Module):
 
     @nn.compact
     def __call__(self, z):
-        f = nn.activation.leaky_relu
-        z = nn.ConvTranspose(self.feature_dim * 16, kernel_size=[4,4], strides=[1,1])(z)
-        z = f(z, self.leak_coef)
-        z = nn.ConvTranspose(self.feature_dim * 8, kernel_size=[4,4], strides=[2,2], padding='SAME')(z)
-        z = f(z, self.leak_coef)
-        z = nn.ConvTranspose(self.feature_dim * 4, kernel_size=[4,4], strides=[2,2], padding='SAME')(z)
-        z = f(z, self.leak_coef)
 
-        if self.image_dim == 64: # 64 x 64 images, i.e CelebA
-            z = nn.ConvTranspose(self.feature_dim * 2, kernel_size=[4,4], strides=[2,2], padding='SAME')(z)
-            z = f(z, self.leak_coef)
-            z = nn.ConvTranspose(self.output_dim, kernel_size=[4,4], strides=[2,2], padding='SAME')(z)
-            z = nn.activation.tanh(z)
-        else: # 32 x 32 images, i.e. CIFAR10, SVHN
-            z = nn.ConvTranspose(self.output_dim, kernel_size=[4,4], strides=[1,1], padding='SAME')(z)
-            z = nn.activation.tanh(z)
+
+        f = nn.activation.leaky_relu
+
+        z = z.reshape((z.shape[0], 1, 1, -1))
+        z = nn.ConvTranspose(self.feature_dim * 16, (4, 4), (4, 4), padding="CIRCULAR", use_bias=False)(z)
+        z = f(z, negative_slope=self.leak_coef)
+        z = nn.ConvTranspose(self.feature_dim * 8, (4, 4), (2, 2), padding="CIRCULAR", use_bias=False)(z)
+        z = f(z, negative_slope=self.leak_coef)
+        z = nn.ConvTranspose(self.feature_dim * 4, (4, 4), (2, 2), padding="CIRCULAR", use_bias=False)(z)
+        z = f(z, negative_slope=self.leak_coef)
+        
+        if self.image_dim == 64:
+            z = nn.ConvTranspose(self.feature_dim * 2, (4, 4), (2, 2), padding="CIRCULAR", use_bias=False)(z)
+            z = f(z, negative_slope=self.leak_coef)
+
+        z = nn.ConvTranspose(self.output_dim, (4, 4), (2, 2), padding="CIRCULAR", use_bias=False)(z)
+        z = nn.tanh(z)
 
         return z

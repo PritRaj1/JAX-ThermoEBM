@@ -103,7 +103,7 @@ class Trainer:
             self.config["BATCH_SIZE"],
             self.config["NUM_Z"],
         )
-
+        
         # Initialise the Generator model
         GEN_params = GEN_model.init(GEN_init_key, z_init)
 
