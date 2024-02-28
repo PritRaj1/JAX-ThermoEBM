@@ -16,7 +16,7 @@ from pypapi import events, papi_high as high
 
 from src.pipeline.pipeline_steps import get_losses, update_params
 from src.models.PriorModel import EBM
-from src.models.GeneratorModel import GEN
+from src.models.GeneratorModel import GEN_64, GEN_32
 from src.MCMC_Samplers.sample_distributions import sample_p0, sample_prior
 from src.pipeline.loss_fcn import TI_GEN_loss_fcn
 
@@ -90,12 +90,20 @@ class Trainer:
         GEN_init_key = jax.random.PRNGKey(0)
 
         # Create the Generator model
-        GEN_model = GEN(
-            feature_dim=self.config["GEN_FEATURE_DIM"],
-            output_dim=self.config["CHANNELS"],
-            image_dim=self.config["IMAGE_DIM"],
-            leak_coef=self.config["GEN_LEAK"],
-        )
+        if self.config["IMAGE_DIM"] == 64:
+            GEN_model = GEN_64(
+                feature_dim=self.config["GEN_FEATURE_DIM"],
+                output_dim=self.config["CHANNELS"],
+                image_dim=self.config["IMAGE_DIM"],
+                leak_coef=self.config["GEN_LEAK"],
+            )
+        else:
+            GEN_model = GEN_32(
+                feature_dim=self.config["GEN_FEATURE_DIM"],
+                output_dim=self.config["CHANNELS"],
+                image_dim=self.config["IMAGE_DIM"],
+                leak_coef=self.config["GEN_LEAK"],
+            )
 
         self.key, z_init = sample_p0(
             self.key,
