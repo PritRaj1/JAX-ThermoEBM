@@ -3,15 +3,16 @@ import jax
 import jax.numpy as jnp
 import optax
 from tensorboardX import SummaryWriter
+from torchvision.utils import make_grid
 
 # Metrics
 from pypapi import events, papi_high as high
 from torchmetrics.image.fid import FrechetInceptionDistance
+from torchmetrics.image.mifid import MemorizationInformedFrechetInceptionDistance
 from torchmetrics.image.kid import KernelInceptionDistance
 from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
 
 from src.pipeline.pipeline_steps import get_losses, updara_params
-from src.pipeline.validation_steps import val_ebm_step, val_gen_step
 from src.models.PriorModel import EBM
 from src.models.GeneratorModel import GEN
 from src.MCMC_Samplers.sample_distributions import sample_p0, sample_prior
@@ -20,6 +21,19 @@ from src.pipeline.loss_fcn import TI_GEN_loss_fcn
 class Trainer():
     def __init__(self, config, log_path):
         self.key = jax.random.PRNGKey(0)
+
+        # for key, value in config.items():
+        #     try:
+        #         config[key] = jnp.int32(value)
+        #     except:
+        #         try:
+        #             config[key] = jnp.float32(value)
+        #         except:
+        #             try:
+        #                 config[key] = eval(value)
+        #             except:
+        #                 pass
+
         self.config = config
 
         self.init_EBM()
@@ -30,18 +44,19 @@ class Trainer():
         self.csv_logger = None
 
         self.fid = FrechetInceptionDistance(feature=64, normalize=True) # FID metric
+        self.mifid = MemorizationInformedFrechetInceptionDistance(feature=64, normalize=True) # MI-FID metric
         self.kid = KernelInceptionDistance(feature=64, subset_size=config['BATCH_SIZE'], normalize=True) # KID metric
         self.lpips = LearnedPerceptualImagePatchSimilarity(net_type='alex', normalize=True) # LPIPS metric
 
     def init_EBM(self):
         EBM_init_key = jax.random.PRNGKey(0)
 
-        z_init = sample_p0(
-            self.key, 
-            self.config['p0_SIGMA'], 
-            self.config['BATCH_SIZE'], 
-            self.config['NUM_Z']
-        )
+        self.key, z_init = sample_p0(
+                                    self.key, 
+                                    self.config['p0_SIGMA'], 
+                                    self.config['BATCH_SIZE'], 
+                                    self.config['NUM_Z']
+                                )
         
         # Create the EBM model
         EBM_model = EBM(
@@ -74,6 +89,13 @@ class Trainer():
             image_dim=self.config['IMAGE_DIM'],
             leak_coef=self.config['GEN_LEAK']
             )
+        
+        self.key, z_init = sample_p0(
+                            self.key, 
+                            self.config['p0_SIGMA'], 
+                            self.config['BATCH_SIZE'], 
+                            self.config['NUM_Z']
+                        )
 
         # Initialise the Generator model
         self.GEN_params = GEN_model.init(GEN_init_key, z_init)
@@ -197,7 +219,7 @@ class Trainer():
         x = torch.from_numpy(x)
         x_pred = torch.from_numpy(x_pred)
 
-        # Convert for [-1, 1] to [0, 1] normalisation
+        # Convert for [-1, 1] to [0, 1], image probailities
         x_metric = ((x + 1) / 2).reshape(-1, x.shape[1], x.shape[2], x.shape[3])
         gen_metric = (x_pred + 1) / 2
 
@@ -205,6 +227,11 @@ class Trainer():
         self.fid.update(x_metric, real=True)
         self.fid.update(gen_metric, real=False)
         fid_score = self.fid.compute()
+
+        # MI-FID score
+        self.mifid.update(x_metric, real=True)
+        self.mifid.update(gen_metric, real=False)
+        mifid_score = self.mifid.compute()
 
         # KID score
         self.kid.update(x_metric, real=True)
@@ -215,12 +242,13 @@ class Trainer():
         lpips_score = self.lpips(x_metric, gen_metric)
 
         self.tb_writer.add_scalar('val_FID', fid_score, epoch)
+        self.tb_writer.add_scalar('val_MI-FID', mifid_score, epoch)
         self.tb_writer.add_scalar('val_KID', kid_score, epoch)
         self.tb_writer.add_scalar('val_LPIPS', lpips_score, epoch)
 
         # Log a grid of 4x4 images
-        self.tb_writer.add_image('Real Images', x_metric, epoch)
-        self.tb_writer.add_image('Generated Images', gen_metric, epoch)
+        grid = make_grid(x_pred[:16], nrow=4)
+        self.tb_writer.add_image('Generated Images', grid, epoch)
 
     def profile_flops(self, x):
 
