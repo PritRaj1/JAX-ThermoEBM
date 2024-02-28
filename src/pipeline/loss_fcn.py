@@ -73,8 +73,6 @@ def TI_EBM_loss_fcn(
     Returns:
     - total_loss: the total loss for the entire thermodynamic integration loop, log(p_a(z))
     """
-    # Prepend 0 to the temperature schedule, for unconditional ∇T calculation
-    temp_schedule = (0,) + temp_schedule
 
     total_loss = 0
 
@@ -94,6 +92,9 @@ def TI_EBM_loss_fcn(
         num_z,
         temp_schedule,
     )
+
+    # Prepend 0 to the temperature schedule, for unconditional ∇T calculation
+    temp_schedule = (0,) + temp_schedule
 
     for i in range(1, len(temp_schedule)):
         key, z_prior = sample_prior(
@@ -150,9 +151,6 @@ def TI_GEN_loss_fcn(
     - total_loss: the total loss for the entire thermodynamic integration loop, log(p_β(x | z))
     """
 
-    # Prepend 0 to the temperature schedule, for unconditional ∇T calculation
-    temp_schedule = (0,) + temp_schedule
-
     total_loss = 0
 
     # Generate z_posterior for all temperatures
@@ -171,6 +169,9 @@ def TI_GEN_loss_fcn(
         num_z,
         temp_schedule,
     )
+
+    # Prepend 0 to the temperature schedule, for unconditional ∇T calculation
+    temp_schedule = (0,) + temp_schedule
 
     for i in range(1, len(temp_schedule)):
 
