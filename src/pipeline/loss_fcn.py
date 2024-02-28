@@ -28,7 +28,8 @@ def gen_loss(key, x, z, GEN_fwd, GEN_params, pl_sig):
     # Compute -log[ p_β(x | z) ]; max likelihood training
     key, subkey = jax.random.split(key)
     x_pred = GEN_fwd(GEN_params, z) + (pl_sig * jax.random.normal(subkey, x.shape))
-    log_lkhood = (jax.linalg.norm(x - x_pred, axis=-1) ** 2) / (2.0 * pl_sig**2)
+    log_lkhood = (jnp.linalg.norm(x - x_pred, axis=(2,3)) ** 2) / (2.0 * pl_sig**2)
+    log_lkhood = jnp.mean(log_lkhood, axis=1)
 
     return key, log_lkhood
 
@@ -94,7 +95,7 @@ def TI_EBM_loss_fcn(
         temp_schedule,
     )
 
-    for i in range(1, len(temp_schedule) + 1):
+    for i in range(1, len(temp_schedule)):
         key, z_prior = sample_prior(
             key, EBM_fwd, EBM_params, p0_sig, step_size, num_steps, batch_size, num_z
         )
@@ -109,7 +110,7 @@ def TI_EBM_loss_fcn(
         # # 1/2 * (f(x_i) + f(x_{i-1})) * ∇T
         total_loss += 0.5 * (loss_current + total_loss) * delta_T
 
-    return total_loss, key
+    return total_loss.mean(), key
 
 
 def TI_GEN_loss_fcn(
@@ -171,7 +172,7 @@ def TI_GEN_loss_fcn(
         temp_schedule,
     )
 
-    for i in range(1, len(temp_schedule) + 1):
+    for i in range(1, len(temp_schedule)):
 
         # MSE between g(z) and x, where z ~ p_θ(z|x, t)
         key, loss_current = gen_loss(
@@ -184,4 +185,4 @@ def TI_GEN_loss_fcn(
         # # 1/2 * (f(x_i) + f(x_{i-1})) * ∇T
         total_loss += 0.5 * (loss_current + total_loss) * delta_T
 
-    return total_loss, key
+    return total_loss.mean(), key

@@ -100,6 +100,6 @@ def sample_posterior(
             )
             key, z = update_step(key, z, grad_f, step_size)
 
-        z_samples = jax.ops.index_update(z_samples, idx, z)
+        z_samples = z_samples.at[idx].set(z)
 
     return key, z_samples

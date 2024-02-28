@@ -16,8 +16,15 @@ def prior_grad_log(z, EBM_fwd, EBM_params, p0_sig):
     Returns:
     - ∇_z( log[p_a(x)] )
     """
-    # Find the gradient of the f_a(z) w.r.t. z
-    grad_f = jax.grad(EBM_fwd)(EBM_params, z)[1]
+
+    def EBM_fcn(z):
+
+        f_z = EBM_fwd(EBM_params, z)
+
+        return f_z.sum()
+
+    # Find the gradient of the f_a(z) w.r.t. each z
+    grad_f = jax.jacfwd(EBM_fcn)(z)
 
     return grad_f - (z / (p0_sig**2))
 
@@ -45,9 +52,15 @@ def posterior_grad_log(
 
     def log_llood_fcn(z, x):
         g_z = GEN_fwd(GEN_params, z)
-        return -t * (jnp.linalg.norm(x - g_z, axis=-1) ** 2) / (2.0 * pl_sig**2)
 
-    grad_log_llood = jax.grad(log_llood_fcn)(z, x)[0]
+        MSE = jnp.linalg.norm(x - g_z, axis=(2,3))
+        MSE = jnp.mean(MSE, axis=1)
+        log_lkhood = -t * (MSE**2) / (2 * pl_sig**2)
+
+        return log_lkhood.sum()
+    
+    # Find the gradient of the log likelihood w.r.t. each z 
+    grad_log_llood = jax.jacfwd(log_llood_fcn)(z, x)
 
     grad_prior = prior_grad_log(z, EBM_fwd, EBM_params, p0_sig)
 

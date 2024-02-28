@@ -12,6 +12,8 @@ from torch.utils.data import DataLoader
 from src.pipeline.LatentEBM_Trainer import Trainer
 from src.utils.helper_functions import parse_input_file, get_data
 
+print(f"Device: {jax.default_backend()}")
+
 config = parse_input_file("hyperparams.input")
 
 dataset, val_dataset, config["IMAGE_DIM"] = get_data(config["DATASET"])

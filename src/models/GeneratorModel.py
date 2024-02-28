@@ -27,4 +27,4 @@ class GEN(nn.Module):
         z = nn.ConvTranspose(self.output_dim, (4, 4), (2, 2), padding="CIRCULAR", use_bias=False)(z)
         z = nn.tanh(z)
 
-        return z
+        return z.reshape((z.shape[0], self.output_dim, self.image_dim, self.image_dim))
