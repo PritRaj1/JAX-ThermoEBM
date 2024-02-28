@@ -44,8 +44,7 @@ val_loader = DataLoader(val_data, batch_size=config["BATCH_SIZE"], shuffle=False
 rng = jax.random.PRNGKey(0)
 
 Trainer = Trainer(config, "logs/")
-EBM_fwd = Trainer.init_EBM()
-GEN_fwd = Trainer.init_GEN()
+EBM_list, GEN_list = Trainer.setup()
 
 # Train the model
 tqdm_bar = tqdm.tqdm(range(config["NUM_EPOCHS"]))
@@ -54,7 +53,8 @@ for epoch in tqdm_bar:
 
     for batch in test_loader:
         x = jnp.array(batch[0].numpy())
-        train_loss += Trainer.train(x, epoch, EBM_fwd, GEN_fwd)
+        loss, EBM_list, GEN_list = Trainer.train(x, epoch, EBM_list, GEN_list)
+        train_loss += loss
 
     tqdm_bar.set_postfix({"train_loss": train_loss})
 
@@ -62,7 +62,7 @@ for epoch in tqdm_bar:
         val_loss = 0
         for batch in val_loader:
             x = jnp.array(batch[0].numpy())
-            val_loss += Trainer.validate(x, epoch, EBM_fwd, GEN_fwd)
+            val_loss += Trainer.validate(x, epoch, EBM_list, GEN_list)
         tqdm_bar.set_postfix({"train_loss": train_loss, "val_loss": val_loss})
 
     # Profile flops in first epoch

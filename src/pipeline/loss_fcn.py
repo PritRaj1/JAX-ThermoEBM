@@ -73,7 +73,7 @@ def TI_EBM_loss_fcn(
     - total_loss: the total loss for the entire thermodynamic integration loop, log(p_a(z))
     """
     # Prepend 0 to the temperature schedule, for unconditional ∇T calculation
-    temp_schedule = jnp.concatenate([0], temp_schedule)
+    temp_schedule = (0,) + temp_schedule
 
     total_loss = 0
 
@@ -150,7 +150,7 @@ def TI_GEN_loss_fcn(
     """
 
     # Prepend 0 to the temperature schedule, for unconditional ∇T calculation
-    temp_schedule = jnp.concatenate([0], temp_schedule)
+    temp_schedule = (0,) + temp_schedule
 
     total_loss = 0
 

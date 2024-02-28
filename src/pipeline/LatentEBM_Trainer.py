@@ -1,6 +1,7 @@
 import torch
 import jax
 import jax.numpy as jnp
+import numpy as np
 import optax
 from tensorboardX import SummaryWriter
 from torchvision.utils import make_grid
@@ -13,7 +14,7 @@ from torchmetrics.image.kid import KernelInceptionDistance
 from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
 from pypapi import events, papi_high as high
 
-from src.pipeline.pipeline_steps import get_losses, updara_params
+from src.pipeline.pipeline_steps import get_losses, update_params
 from src.models.PriorModel import EBM
 from src.models.GeneratorModel import GEN
 from src.MCMC_Samplers.sample_distributions import sample_p0, sample_prior
@@ -25,10 +26,6 @@ class Trainer:
 
         self.key = jax.random.PRNGKey(0)
         self.config = config
-
-        self.init_EBM()
-        self.init_GEN()
-        self.init_temps()
 
         self.tb_writer = SummaryWriter(log_path)
         self.csv_logger = None
@@ -43,6 +40,21 @@ class Trainer:
         self.lpips = LearnedPerceptualImagePatchSimilarity(
             net_type="alex", normalize=True
         )  # LPIPS metric
+
+    def setup(self):
+
+        # JAX does not like Hash maps, so we need to unpack the config
+        EBM_fwd, EBM_params, EBM_optimiser = self.init_EBM()
+        GEN_fwd, GEN_params, GEN_optimiser = self.init_GEN()
+        self.temp = self.init_temps()
+
+        EBM_opt_state = EBM_optimiser.init(EBM_params)
+        GEN_opt_state = GEN_optimiser.init(GEN_params)
+
+        EBM_list = [EBM_fwd, EBM_params, EBM_optimiser, EBM_opt_state]
+        GEN_list = [GEN_fwd, GEN_params, GEN_optimiser, GEN_opt_state]
+
+        return EBM_list, GEN_list
 
     def init_EBM(self):
         EBM_init_key = jax.random.PRNGKey(0)
@@ -61,8 +73,7 @@ class Trainer:
             leak_coef=self.config["EBM_LEAK"],
         )
 
-        # Initialise the EBM model
-        self.EBM_params = EBM_model.init(EBM_init_key, z_init)
+        EBM_params = EBM_model.init(EBM_init_key, z_init)
 
         # Initialise the EBM optimiser
         E_schedule = optax.exponential_decay(
@@ -70,14 +81,10 @@ class Trainer:
             transition_steps=self.config["E_STEPS"],
             decay_rate=self.config["E_GAMMA"],
         )
-        self.EBM_optimiser = optax.adam(learning_rate=E_schedule)
 
         del EBM_init_key
 
-        def EBM_apply(params, z):
-            return EBM_model.apply(params, z)
-
-        return EBM_apply
+        return EBM_model.apply, EBM_params, optax.adam(learning_rate=E_schedule)
 
     def init_GEN(self):
         GEN_init_key = jax.random.PRNGKey(0)
@@ -98,7 +105,7 @@ class Trainer:
         )
 
         # Initialise the Generator model
-        self.GEN_params = GEN_model.init(GEN_init_key, z_init)
+        GEN_params = GEN_model.init(GEN_init_key, z_init)
 
         # Initialise the Generator optimiser
         G_schedule = optax.exponential_decay(
@@ -106,14 +113,10 @@ class Trainer:
             transition_steps=self.config["G_STEPS"],
             decay_rate=self.config["G_GAMMA"],
         )
-        self.GEN_optimiser = optax.adam(learning_rate=G_schedule)
 
         del GEN_init_key
 
-        def GEN_apply(params, z):
-            return GEN_model.apply(params, z)
-
-        return GEN_apply
+        return GEN_model.apply, GEN_params, optax.adam(learning_rate=G_schedule)
 
     def init_temps(self):
 
@@ -123,50 +126,58 @@ class Trainer:
                     self.config["TEMP_POWER"]
                 )
             )
-            self.temp = {
-                "schedule": jnp.linspace(0, 1, self.config["NUM_TEMPS"])
-                ** self.config["TEMP_POWER"],
-            }
+            temp = tuple(np.linspace(0, 1, self.config["NUM_TEMPS"]) ** self.config["TEMP_POWER"])
 
         else:
             print("Using no thermodynamic integration, defaulting to Vanilla Model")
-            self.temp = {
-                "schedule": jnp.array([1]),
-            }
+            temp = (1,)
 
-    def train(self, x, epoch, EBM_fwd, GEN_fwd):
+        return temp
+
+    def get_hyperparams(self):
+        simga_l = self.config["LKHOOD_SIGMA"]
+        sigma_p = self.config["p0_SIGMA"]
+        e_step = self.config["E_STEP_SIZE"]
+        e_sample = self.config["E_SAMPLE_STEPS"]
+        g_step = self.config["G_STEP_SIZE"]
+        g_sample = self.config["G_SAMPLE_STEPS"]
+        batch_size = self.config["BATCH_SIZE"]
+        num_z = self.config["NUM_Z"]
+
+        return [simga_l, sigma_p, e_step, e_sample, g_step, g_sample, batch_size, num_z]
+
+    def train(self, x, epoch, EBM_list, GEN_list):
+
+        EBM_fwd, EBM_params, EBM_optimiser, EBM_opt_state = EBM_list
+        GEN_fwd, GEN_params, GEN_optimiser, GEN_opt_state = GEN_list
+
+        hyperparams_list = self.get_hyperparams()
+
+        key = self.key
+        t = self.temp
 
         # Get the losses
         self.key, loss_ebm, grad_ebm, loss_gen, grad_gen = get_losses(
-            self.key,
+            key,
             x,
             EBM_fwd,
-            self.EBM_params,
+            EBM_params,
             GEN_fwd,
-            self.GEN_params,
-            self.config["LKHOOD_SIGMA"],
-            self.config["p0_SIGMA"],
-            self.config["E_STEP_SIZE"],
-            self.config["E_SAMPLE_STEPS"],
-            self.config["G_STEP_SIZE"],
-            self.config["G_SAMPLE_STEPS"],
-            self.config["BATCH_SIZE"],
-            self.config["NUM_Z"],
-            self.temp["schedule"],
+            GEN_params,
+            *hyperparams_list,
+            t
         )
 
         # Update the parameters
-        self.EBM_params, self.EBM_opt_state, self.GEN_params, self.GEN_opt_state = (
-            updara_params(
-                self.EBM_params,
-                self.EBM_opt_state,
-                self.GEN_params,
-                self.GEN_opt_state,
-                grad_ebm,
-                grad_gen,
-                self.EBM_optimiser,
-                self.GEN_optimiser,
-            )
+        EBM_params, EBM_opt_state, GEN_params, GEN_opt_state = update_params(
+            EBM_params,
+            EBM_opt_state,
+            GEN_params,
+            GEN_opt_state,
+            grad_ebm,
+            grad_gen,
+            EBM_optimiser,
+            GEN_optimiser,
         )
 
         total_loss = loss_ebm.mean() + loss_gen.mean()
@@ -177,27 +188,31 @@ class Trainer:
         self.tb_writer.add_scalar("train_var_grad/EBM", jnp.var(grad_ebm), epoch)
         self.tb_writer.add_scalar("train_var_grad/GEN", jnp.var(grad_gen), epoch)
 
-        return total_loss
+        new_EBM_list = [EBM_fwd, EBM_params, EBM_optimiser, EBM_opt_state]
+        new_GEN_list = [GEN_fwd, GEN_params, GEN_optimiser, GEN_opt_state]
 
-    def validate(self, x, epoch, EBM_fwd, GEN_fwd):
+        return total_loss, new_EBM_list, new_GEN_list
+
+    def validate(self, x, epoch, EBM_list, GEN_list):
+
+        EBM_fwd, EBM_params, EBM_optimiser, EBM_opt_state = EBM_list
+        GEN_fwd, GEN_params, GEN_optimiser, GEN_opt_state = GEN_list
+
+        hyperparams_list = self.get_hyperparams()
+
+        key = self.key
+        t = self.temp
 
         # Get the losses
         self.key, loss_ebm, grad_ebm, loss_gen, grad_gen = get_losses(
-            self.key,
+            key,
             x,
             EBM_fwd,
-            self.EBM_params,
+            EBM_params,
             GEN_fwd,
-            self.GEN_params,
-            self.config["LKHOOD_SIGMA"],
-            self.config["p0_SIGMA"],
-            self.config["E_STEP"],
-            self.config["E_SAMPLE_STEPS"],
-            self.config["G_STEP_SIZE"],
-            self.config["G_SAMPLE_STEPS"],
-            self.config["BATCH_SIZE"],
-            self.config["NUM_Z"],
-            self.temp["schedule"],
+            GEN_params,
+            *hyperparams_list,
+            t
         )
 
         total_loss = loss_ebm.mean() + loss_gen.mean()

@@ -65,7 +65,7 @@ def get_losses(
 
 
 @jax.jit
-def updara_params(
+def update_params(
     EBM_params,
     EBM_opt_state,
     GEN_params,
