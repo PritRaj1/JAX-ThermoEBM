@@ -108,7 +108,7 @@ def TI_EBM_loss_fcn(key,
         # # 1/2 * (f(x_i) + f(x_{i-1})) * ∇T
         total_loss += (0.5 * (loss_current + total_loss) * delta_T)
 
-    return total_loss
+    return total_loss, key
 
 @partial(jax.jit, static_argnums=(2,4,6,7,8,9,10,11,12))
 def TI_GEN_loss_fcn(key, 
@@ -177,5 +177,5 @@ def TI_GEN_loss_fcn(key,
         # # 1/2 * (f(x_i) + f(x_{i-1})) * ∇T
         total_loss += (0.5 * (loss_current + total_loss) * delta_T)
 
-    return total_loss
+    return total_loss, key
 

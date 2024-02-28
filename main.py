@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import tqdm
 from torch.utils.data import DataLoader
 
-from src.pipeline.train_state import Train_State
+from pipeline.train_state_broken import Train_State
 from src.models.PriorModel import EBM
 from src.models.GeneratorModel import GEN
 from src.MCMC_Samplers.latent_prior_MCMC import prior_sampler
