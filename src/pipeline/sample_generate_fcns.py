@@ -11,7 +11,7 @@ def sample_z(state, z0, data, t):
 
     # MCMC sampling to generate zK
     zK_prior = prior_sampler(z0, state, subkey) # zK ~ p_a(z)
-    zK_posterior = posterior_sampler(z0, state, subkey, data, t) # zK ~ p_θ(z|x)
+    zK_posterior = posterior_sampler(z0, state, subkey, data, t) # zK ~ p_θ(z|x, t)
 
     return zK_prior, zK_posterior
 
