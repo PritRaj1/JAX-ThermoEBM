@@ -4,19 +4,6 @@ import numpy
 import jax.numpy as jnp
 
 
-def parse_input_file(input_file="hyperparams.input"):
-    """Function for parse hyperparameters from input file."""
-    config = {}
-    with open(input_file, "r") as f:
-        for line in f:
-            # Skip comments and empty lines
-            if line.startswith("#") or not line.strip():
-                continue
-            key, value = line.strip().split("=")
-            config[key.strip()] = value.strip()
-    return config
-
-
 def get_data(name):
 
     img_dim = 64 if name == "CelebA" else 32
@@ -60,3 +47,14 @@ def get_data(name):
         raise ValueError("Invalid dataset name.")
 
     return dataset, val_dataset, str(img_dim)
+
+def get_grad_var(grad_ebm, grad_gen):
+     # Get gradients from grad dictionaries
+    grad_ebm = jax.tree_util.tree_flatten(grad_ebm)[0]
+    grad_gen = jax.tree_util.tree_flatten(grad_gen)[0]   
+
+    # Flatten the gradients
+    grad_ebm = jnp.concatenate([jnp.ravel(g) for g in grad_ebm])
+    grad_gen = jnp.concatenate([jnp.ravel(g) for g in grad_gen])
+
+    return jnp.var(jnp.concatenate([grad_ebm, grad_gen]))

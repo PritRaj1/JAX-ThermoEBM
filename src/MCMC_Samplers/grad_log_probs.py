@@ -1,17 +1,22 @@
 import jax
 import jax.numpy as jnp
 from functools import partial
+import configparser
 
+parser = configparser.ConfigParser()
+parser.read("hyperparams.ini")
 
-def prior_grad_log(z, EBM_fwd, EBM_params, p0_sig):
+p0_sig = float(parser['SIGMAS']['p0_SIGMA'])
+pl_sig = float(parser['SIGMAS']['LKHOOD_SIGMA'])
+
+def prior_grad_log(z, EBM_params, EBM_fwd):
     """
     Function to compute the gradient of the log prior: log[p_a(x)] w.r.t. z.
 
     Args:
     - z: latent space variable sampled from p0
-    - EBM_fwd: energy-based model forward pass, --immutable
     - EBM_params: energy-based model parameters
-    - p0_sig: prior sigma, --immutable
+    - EBM_fwd: energy-based model forward pass, --immutable
 
     Returns:
     - ∇_z( log[p_a(x)] )
@@ -30,7 +35,7 @@ def prior_grad_log(z, EBM_fwd, EBM_params, p0_sig):
 
 
 def posterior_grad_log(
-    z, x, t, EBM_fwd, EBM_params, GEN_fwd, GEN_params, pl_sig, p0_sig
+    z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd
 ):
     """
     Function to compute the gradient of the log posterior: log[ p(x | z)^t * p(z) ] w.r.t. z.
@@ -39,12 +44,10 @@ def posterior_grad_log(
     - z: latent space variable sampled from p0
     - x: batch of data samples
     - t: current temperature
-    EBM_fwd: energy-based model forward pass, --immutable
-    EBM_params: energy-based model parameters
-    GEN_fwd: generator forward pass, --immutable
-    GEN_params: generator parameters
-    pl_sig: likelihood sigma, --immutable
-    p0_sig: prior sigma, --immutable
+    - EBM_params: energy-based model parameters
+    - GEN_params: generator parameters
+    - EBM_fwd: energy-based model forward pass, --immutable
+    - GEN_fwd: generator forward pass, --immutable
 
     Returns:
     - ∇_z( log[p_θ(z | x)] ) ∝ ∇_z( log[p(x | z)^t * p(z)] )
@@ -62,6 +65,6 @@ def posterior_grad_log(
     # Find the gradient of the log likelihood w.r.t. each z 
     grad_log_llood = jax.jacfwd(log_llood_fcn)(z, x)
 
-    grad_prior = prior_grad_log(z, EBM_fwd, EBM_params, p0_sig)
+    grad_prior = prior_grad_log(z, EBM_params, EBM_fwd)
 
     return grad_log_llood + grad_prior

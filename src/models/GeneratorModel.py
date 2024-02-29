@@ -1,12 +1,15 @@
 import flax.linen as nn
-import jax.numpy as jnp
+import configparser
 
+parser = configparser.ConfigParser()
+parser.read("hyperparams.ini")
+
+feature_dim = int(parser['GEN']['GEN_FEATURE_DIM'])
+output_dim = int(parser['GEN']['CHANNELS'])
+leak_coef = float(parser['GEN']['GEN_LEAK'])
 
 class GEN(nn.Module):
-    feature_dim: int
-    output_dim: int
     image_dim: int
-    leak_coef: float
 
     def setup(self):
 
@@ -14,9 +17,9 @@ class GEN(nn.Module):
 
         def conditional_64(z):
             z = nn.ConvTranspose(
-                self.feature_dim * 2, (4, 4), (2, 2), padding="CIRCULAR", use_bias=False
+                feature_dim * 2, (4, 4), (2, 2), padding="CIRCULAR", use_bias=False
             )(z)
-            z = self.f(z, negative_slope=self.leak_coef)
+            z = self.f(z, negative_slope=leak_coef)
             return z
 
         def conditional_32(z):
@@ -32,20 +35,20 @@ class GEN(nn.Module):
     def __call__(self, z):
 
         z = nn.ConvTranspose(
-            self.feature_dim * 16, (4, 4), (4, 4), padding="CIRCULAR", use_bias=False
+            feature_dim * 16, (4, 4), (4, 4), padding="CIRCULAR", use_bias=False
         )(z)
-        z = self.f(z, negative_slope=self.leak_coef)
+        z = self.f(z, negative_slope=leak_coef)
         z = nn.ConvTranspose(
-            self.feature_dim * 8, (4, 4), (2, 2), padding="CIRCULAR", use_bias=False
+            feature_dim * 8, (4, 4), (2, 2), padding="CIRCULAR", use_bias=False
         )(z)
-        z = self.f(z, negative_slope=self.leak_coef)
+        z = self.f(z, negative_slope=leak_coef)
         z = nn.ConvTranspose(
-            self.feature_dim * 4, (4, 4), (2, 2), padding="CIRCULAR", use_bias=False
+            feature_dim * 4, (4, 4), (2, 2), padding="CIRCULAR", use_bias=False
         )(z)
-        z = self.f(z, negative_slope=self.leak_coef)
+        z = self.f(z, negative_slope=leak_coef)
         z = self.conditional_block(z)
         z = nn.ConvTranspose(
-            self.output_dim, (4, 4), (2, 2), padding="CIRCULAR", use_bias=False
+            output_dim, (4, 4), (2, 2), padding="CIRCULAR", use_bias=False
         )(z)
         z = nn.tanh(z)
 
