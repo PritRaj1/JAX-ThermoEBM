@@ -66,6 +66,7 @@ for epoch in tqdm_bar:
 
     for batch in test_loader:
         x = jnp.array(batch[0].numpy())
+        x = jnp.transpose(x, (0, 3, 2, 1)) # NHWC -> NCHW
         loss, EBM_list, GEN_list = Trainer.train(x, epoch, EBM_list, GEN_list)
         train_loss += loss
 

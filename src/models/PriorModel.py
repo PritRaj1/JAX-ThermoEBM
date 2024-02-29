@@ -9,11 +9,11 @@ class EBM(nn.Module):
     @nn.compact
     def __call__(self, z):
         f = nn.activation.leaky_relu
-        z = z.squeeze()
+
         z = nn.Dense(self.hidden_units)(z)
         z = f(z, self.leak_coef)
         z = nn.Dense(self.hidden_units)(z)
         z = f(z, self.leak_coef)
         z = nn.Dense(self.output_dim)(z)
 
-        return z.reshape((-1, self.output_dim, 1, 1))
+        return z

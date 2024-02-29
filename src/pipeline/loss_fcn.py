@@ -28,7 +28,7 @@ def gen_loss(key, x, z, GEN_fwd, GEN_params, pl_sig):
     # Compute -log[ p_β(x | z) ]; max likelihood training
     key, subkey = jax.random.split(key)
     x_pred = GEN_fwd(GEN_params, z) + (pl_sig * jax.random.normal(subkey, x.shape))
-    log_lkhood = (jnp.linalg.norm(x - x_pred, axis=(2,3)) ** 2) / (2.0 * pl_sig**2)
+    log_lkhood = (jnp.linalg.norm(x - x_pred, axis=(1,2)) ** 2) / (2.0 * pl_sig**2)
     log_lkhood = jnp.mean(log_lkhood, axis=1)
 
     return key, log_lkhood
@@ -46,7 +46,7 @@ def TI_EBM_loss_fcn(
     step_size,
     num_steps,
     batch_size,
-    num_z,
+    z_channels,
     temp_schedule,
 ):
     """
@@ -67,7 +67,6 @@ def TI_EBM_loss_fcn(
     - step_size: step size, --immutable
     - num_steps: number of steps, --immutable
     - batch_size: batch size, --immutable
-    - num_z: number of latent space variables, --immutable
     - temp_schedule: temperature schedule, --immutable
 
     Returns:
@@ -89,7 +88,7 @@ def TI_EBM_loss_fcn(
         step_size,
         num_steps,
         batch_size,
-        num_z,
+        z_channels,
         temp_schedule,
     )
 
@@ -98,7 +97,7 @@ def TI_EBM_loss_fcn(
 
     for i in range(1, len(temp_schedule)):
         key, z_prior = sample_prior(
-            key, EBM_fwd, EBM_params, p0_sig, step_size, num_steps, batch_size, num_z
+            key, EBM_fwd, EBM_params, p0_sig, step_size, num_steps, batch_size, z_channels
         )
 
         z_posterior_t = z_posterior[i - 1]
@@ -126,7 +125,7 @@ def TI_GEN_loss_fcn(
     step_size,
     num_steps,
     batch_size,
-    num_z,
+    z_channels,
     temp_schedule,
 ):
     """
@@ -144,7 +143,6 @@ def TI_GEN_loss_fcn(
     - step_size: step size, --immutable
     - num_steps: number of steps, --immutable
     - batch_size: batch size, --immutable
-    - num_z: number of latent space variables, --immutable
     - temp_schedule: temperature schedule, --immutable
 
     Returns:
@@ -166,7 +164,7 @@ def TI_GEN_loss_fcn(
         step_size,
         num_steps,
         batch_size,
-        num_z,
+        z_channels,
         temp_schedule,
     )
 

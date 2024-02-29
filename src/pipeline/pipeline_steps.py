@@ -6,7 +6,7 @@ from functools import partial
 from src.pipeline.loss_fcn import TI_EBM_loss_fcn, TI_GEN_loss_fcn
 
 
-@partial(jax.jit, static_argnums=(2, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14))
+@partial(jax.jit, static_argnums=(2, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15))
 def get_losses(
     key,
     x,
@@ -21,45 +21,50 @@ def get_losses(
     GEN_step_size,
     GEN_num_steps,
     batch_size,
-    num_z,
+    z_channels,
     temp_schedule,
 ):
+    
+    def get_losses_grads(x):
+        (loss_ebm, key), grad_ebm = value_and_grad(
+            TI_EBM_loss_fcn, argnums=3, has_aux=True
+        )(
+            key,
+            x,
+            EBM_fwd,
+            EBM_params,
+            GEN_fwd,
+            GEN_params,
+            pl_sig,
+            p0_sig,
+            EBM_step_size,
+            EBM_num_steps,
+            batch_size,
+            z_channels,
+            temp_schedule,
+        )
 
-    (loss_ebm, key), grad_ebm = value_and_grad(
-        TI_EBM_loss_fcn, argnums=3, has_aux=True
-    )(
-        key,
-        x,
-        EBM_fwd,
-        EBM_params,
-        GEN_fwd,
-        GEN_params,
-        pl_sig,
-        p0_sig,
-        EBM_step_size,
-        EBM_num_steps,
-        batch_size,
-        num_z,
-        temp_schedule,
-    )
+        (loss_gen, key), grad_gen = value_and_grad(
+            TI_GEN_loss_fcn, argnums=5, has_aux=True
+        )(
+            key,
+            x,
+            EBM_fwd,
+            EBM_params,
+            GEN_fwd,
+            GEN_params,
+            pl_sig,
+            p0_sig,
+            GEN_step_size,
+            GEN_num_steps,
+            batch_size,
+            z_channels,
+            temp_schedule,
+        )
 
-    (loss_gen, key), grad_gen = value_and_grad(
-        TI_GEN_loss_fcn, argnums=5, has_aux=True
-    )(
-        key,
-        x,
-        EBM_fwd,
-        EBM_params,
-        GEN_fwd,
-        GEN_params,
-        pl_sig,
-        p0_sig,
-        GEN_step_size,
-        GEN_num_steps,
-        batch_size,
-        num_z,
-        temp_schedule,
-    )
+        return key, loss_ebm, grad_ebm, loss_gen, grad_gen
+
+    key, loss_ebm, grad_ebm, loss_gen, grad_gen = jax.vmap(get_losses_grads)(x)
 
     return key, loss_ebm, grad_ebm, loss_gen, grad_gen
 

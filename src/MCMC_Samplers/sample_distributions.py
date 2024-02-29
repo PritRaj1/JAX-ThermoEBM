@@ -14,15 +14,15 @@ def update_step(key, x, grad_f, s):
     return key, x
 
 
-def sample_p0(key, p0_sig, batch_size, num_z):
+def sample_p0(key, p0_sig, batch_size, z_channels):
     """Sample from the prior distribution."""
 
     key, subkey = jax.random.split(key)
-    return key, p0_sig * jax.random.normal(subkey, (batch_size, num_z, 1, 1))
+    return key, p0_sig * jax.random.normal(subkey, (batch_size, 1, 1, z_channels)) 
 
 
 def sample_prior(
-    key, EBM_fwd, EBM_params, p0_sig, step_size, num_steps, batch_size, num_z
+    key, EBM_fwd, EBM_params, p0_sig, step_size, num_steps, batch_size, z_channels
 ):
     """
     Sample from the prior distribution.
@@ -35,14 +35,13 @@ def sample_prior(
     - step_size: step size, --immutable
     - num_steps: number of steps, --immutable
     - batch_size: batch size, --immutable
-    - num_z: number of latent space variables, --immutable
 
     Returns:
     - key: PRNG key
     - z: latent space variable sampled from p_a(x)
     """
 
-    key, z = sample_p0(key, p0_sig, batch_size, num_z)
+    key, z = sample_p0(key, p0_sig, batch_size, z_channels)
 
     for k in range(num_steps):
         grad_f = prior_grad_log(z, EBM_fwd, EBM_params, p0_sig)
@@ -63,7 +62,7 @@ def sample_posterior(
     step_size,
     num_steps,
     batch_size,
-    num_z,
+    z_channels,
     temp_schedule,
 ):
     """
@@ -81,7 +80,6 @@ def sample_posterior(
     - step_size: step size, --immutable
     - num_steps: number of steps, --immutable
     - batch_size: batch size, --immutable
-    - num_z: number of latent space variables, --immutable
     - temp_schedule: temperature schedule, --immutable
 
     Returns:
@@ -89,10 +87,10 @@ def sample_posterior(
     - z_samples: samples from the posterior distribution indexed by temperature
     """
 
-    z_samples = jnp.zeros((len(temp_schedule), batch_size, num_z, 1, 1))
+    z_samples = jnp.zeros((len(temp_schedule), batch_size, 1, 1, z_channels))
 
     for idx, t in enumerate(temp_schedule):
-        key, z = sample_p0(key, p0_sig, batch_size, num_z)
+        key, z = sample_p0(key, p0_sig, batch_size, z_channels)
 
         for k in range(num_steps):
             grad_f = posterior_grad_log(

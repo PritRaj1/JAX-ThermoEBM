@@ -16,10 +16,9 @@ from pypapi import events, papi_high as high
 
 from src.pipeline.pipeline_steps import get_losses, update_params
 from src.models.PriorModel import EBM
-from src.models.GeneratorModel import GEN_64, GEN_32, GEN
+from src.models.GeneratorModel import GEN
 from src.MCMC_Samplers.sample_distributions import sample_p0, sample_prior
 from src.pipeline.loss_fcn import TI_GEN_loss_fcn
-
 
 class Trainer:
     def __init__(self, config, log_path):
@@ -63,14 +62,14 @@ class Trainer:
             self.key,
             self.config["p0_SIGMA"],
             self.config["BATCH_SIZE"],
-            self.config["NUM_Z"],
+            self.config["Z_CHANNELS"],
         )
 
         # Create the EBM model
         EBM_model = EBM(
             hidden_units=self.config["EBM_FEATURE_DIM"],
-            output_dim=self.config["EMB_OUT_SIZE"],
-            leak_coef=self.config["EBM_LEAK"],
+            output_dim=self.config["Z_CHANNELS"],
+            leak_coef=self.config["EBM_LEAK"]
         )
 
         EBM_params = EBM_model.init(EBM_init_key, z_init)
@@ -84,7 +83,9 @@ class Trainer:
 
         del EBM_init_key
 
-        return EBM_model.apply, EBM_params, optax.adam(learning_rate=E_schedule)
+        EBM_fwd = jax.vmap(EBM_model.apply, in_axes=(None, 0))
+
+        return EBM_fwd, EBM_params, optax.adam(learning_rate=E_schedule)
 
     def init_GEN(self):
         GEN_init_key = jax.random.PRNGKey(0)
@@ -101,7 +102,7 @@ class Trainer:
             self.key,
             self.config["p0_SIGMA"],
             self.config["BATCH_SIZE"],
-            self.config["NUM_Z"],
+            self.config["Z_CHANNELS"]
         )
 
         # Initialise the Generator model
@@ -116,7 +117,9 @@ class Trainer:
 
         del GEN_init_key
 
-        return GEN_model.apply, GEN_params, optax.adam(learning_rate=G_schedule)
+        GEN_fwd = jax.vmap(GEN_model.apply, in_axes=(None, 0))
+
+        return GEN_fwd, GEN_params, optax.adam(learning_rate=G_schedule)
 
     def init_temps(self):
 
@@ -144,9 +147,9 @@ class Trainer:
         g_step = self.config["G_STEP_SIZE"]
         g_sample = self.config["G_SAMPLE_STEPS"]
         batch_size = self.config["BATCH_SIZE"]
-        num_z = self.config["NUM_Z"]
+        z_channels = self.config["Z_CHANNELS"]
 
-        return [simga_l, sigma_p, e_step, e_sample, g_step, g_sample, batch_size, num_z]
+        return [simga_l, sigma_p, e_step, e_sample, g_step, g_sample, batch_size, z_channels]
 
     def train(self, x, epoch, EBM_list, GEN_list):
 
@@ -237,7 +240,7 @@ class Trainer:
             self.key,
             self.config["p0_SIGMA"],
             self.config["BATCH_SIZE"],
-            self.config["NUM_Z"],
+            self.config["Z_CHANNELS"]
         )
 
         x_pred = self.GEN_fwd(self.GEN_params, jax.lax.stop_gradient(z_prior))
@@ -301,7 +304,7 @@ class Trainer:
             self.config["G_STEP_SIZE"],
             self.config["G_SAMPLE_STEPS"],
             self.config["BATCH_SIZE"],
-            self.config["NUM_Z"],
+            self.config["Z_CHANNELS"],
             self.temp["schedule"],
         )
 
