@@ -1,13 +1,19 @@
 import configparser
 import torch
+import jax
 import jax.numpy as jnp
+from jax import value_and_grad
 from torchvision.utils import make_grid
+from functools import partial
+from pypapi import events, papi_high as high
 
 # Metrics
 from torchmetrics.image.fid import FrechetInceptionDistance
 from torchmetrics.image.mifid import MemorizationInformedFrechetInceptionDistance
 from torchmetrics.image.kid import KernelInceptionDistance
 from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
+
+from src.pipeline.batched_loss_fcns import EBM_loss_fcn_batched, GEN_loss_fcn_batched
 
 parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")
@@ -57,3 +63,13 @@ def profile_image(x, x_pred, writer, epoch):
     # Log a grid of 4x4 images
     grid = make_grid(x_pred[:16], nrow=4)
     writer.add_image("Generated Images", grid, epoch)
+
+def profile_flops(key, x, params_tup, fwd_fcn_tup, temp_schedule):
+
+    high.start_counters([events.PAPI_FP_OPS])
+
+    (loss_ebm, ebm_key), grad_ebm = value_and_grad(EBM_loss_fcn_batched, argnums=2, has_aux=True)(key, x, *params_tup, *fwd_fcn_tup, temp_schedule)
+
+    (loss_gen, gen_key), grad_gen = value_and_grad(GEN_loss_fcn_batched, argnums=3, has_aux=True)(ebm_key, x, *params_tup, *fwd_fcn_tup, temp_schedule)
+
+    return high.stop_counters()[0]

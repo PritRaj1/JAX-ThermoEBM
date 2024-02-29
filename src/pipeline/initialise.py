@@ -61,11 +61,11 @@ def init_EBM_optimiser(EBM_params):
 
 def init_temp_schedule():
     if temp_power >= 1:
-        print("Using temperature schedule with power: {}".format(temp_power))
+        print("Using Temperature Schedule with Power: {}".format(temp_power))
         temp = tuple(np.linspace(0, 1, num_temps) ** temp_power)
 
     else:
-        print("Using no thermodynamic integration, defaulting to Vanilla Model")
+        print("Using no Thermodynamic Integration, defaulting to Vanilla Model")
         temp = (1,)
 
     return temp
