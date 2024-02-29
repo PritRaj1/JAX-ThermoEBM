@@ -249,6 +249,10 @@ class Trainer:
 
     def log_image_metrics(self, x, x_pred, epoch):
 
+        # # NHWC -> NCHW
+        x = jnp.transpose(x, (0, 3, 2, 1))
+        x_pred = jnp.transpose(x_pred, (0, 3, 2, 1))
+
         x = torch.from_numpy(x)
         x_pred = torch.from_numpy(x_pred)
 

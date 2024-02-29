@@ -1,10 +1,10 @@
 import sys
 import os
 
-os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"]="False"
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"]="0.8"
-os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"]="platform"
-os.environ["XLA_FLAGS"]="--xla_gpu_strict_conv_algorithm_picker=false"
+# os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"]="False"
+os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"]="0.7"
+# os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"]="platform"
+# os.environ["XLA_FLAGS"]="--xla_gpu_strict_conv_algorithm_picker=false"
 
 sys.path.append("..")
 import torch
@@ -18,10 +18,10 @@ from torch.utils.data import DataLoader
 from src.pipeline.LatentEBM_Trainer import Trainer
 from src.utils.helper_functions import parse_input_file, get_data
 
-print(os.environ["XLA_FLAGS"], 
-      os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"], 
-      os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"], 
-      os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"])
+# print(os.environ["XLA_FLAGS"], 
+#       os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"], 
+#       os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"], 
+#       os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"])
 
 print(f"Device: {jax.default_backend()}")
 
