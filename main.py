@@ -51,6 +51,8 @@ fwd_fcn_tup = (EBM_fwd, GEN_fwd)
 optimiser_tup = (EBM_optimiser, GEN_optimiser)
 opt_state_tup = (EBM_opt_state, GEN_opt_state)
 
+log_path = f'logs/{data_set_name}/{temp_schedule[0]}'
+
 # Train the model
 tqdm_bar = tqdm.tqdm(range(num_epochs))
 for epoch in tqdm_bar:
@@ -85,10 +87,9 @@ for epoch in tqdm_bar:
         }
     )
 
-    # Profile flops in final epoch
-    if epoch == num_epochs - 1:
-        flops = profile_flops(key, x, EBM_params, GEN_params)
-        print(f"FLOPS: {flops}")
+    # # Profile flops in final epoch
+    # if epoch == num_epochs - 1:
+    #     profile_flops(key, x, params_tup, fwd_fcn_tup, temp_schedule, log_path)
 
 # Generate an image
 generated_image = generate(key, params_tup, fwd_fcn_tup)
@@ -96,4 +97,5 @@ generated_image = generate(key, params_tup, fwd_fcn_tup)
 # Plot the generated image
 plt.figure()
 plt.imshow(generated_image)
+plt.axis("off")
 plt.savefig("generated_image.png")

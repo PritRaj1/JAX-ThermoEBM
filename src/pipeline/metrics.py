@@ -64,12 +64,8 @@ def profile_image(x, x_pred, writer, epoch):
     grid = make_grid(x_pred[:16], nrow=4)
     writer.add_image("Generated Images", grid, epoch)
 
-def profile_flops(key, x, params_tup, fwd_fcn_tup, temp_schedule):
+def profile_flops(key, x, params_tup, fwd_fcn_tup, temp_schedule, log_path):
 
-    high.start_counters([events.PAPI_FP_OPS])
-
-    (loss_ebm, ebm_key), grad_ebm = value_and_grad(EBM_loss_fcn_batched, argnums=2, has_aux=True)(key, x, *params_tup, *fwd_fcn_tup, temp_schedule)
-
-    (loss_gen, gen_key), grad_gen = value_and_grad(GEN_loss_fcn_batched, argnums=3, has_aux=True)(ebm_key, x, *params_tup, *fwd_fcn_tup, temp_schedule)
-
-    return high.stop_counters()[0]
+    with jax.profiler.trace_context(log_path):
+        (loss_ebm, ebm_key), grad_ebm = value_and_grad(EBM_loss_fcn_batched, argnums=2, has_aux=True)(key, x, *params_tup, *fwd_fcn_tup, temp_schedule)
+        (loss_gen, gen_key), grad_gen = value_and_grad(GEN_loss_fcn_batched, argnums=3, has_aux=True)(ebm_key, x, *params_tup, *fwd_fcn_tup, temp_schedule)

@@ -62,4 +62,4 @@ def generate(key, params_tup, fwd_fcn_tup):
     key, z = sample_prior(key, params_tup[0], fwd_fcn_tup[0])
     x_pred = fwd_fcn_tup[1](params_tup[1], jax.lax.stop_gradient(z))
 
-    return x_pred
+    return x_pred[0]
