@@ -37,10 +37,6 @@ val_data = torch.utils.data.Subset(val_dataset, range(num_val_data))
 test_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
 val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False)
 
-
-EBM_loss_fcn = jax.vmap(TI_EBM_loss_fcn, in_axes=(None, 0, None, None, None, None, None))
-GEN_loss_fcn = jax.vmap(TI_GEN_loss_fcn, in_axes=(None, 0, None, None, None, None, None))
-
 EBM_params, EBM_fwd = init_EBM(key)
 GEN_params, GEN_fwd = init_GEN(key, image_dim)
 
@@ -56,25 +52,46 @@ def generate(key, EBM_params, GEN_params):
 
     return x_pred
 
+def EBM_loss_fcn_batched(key, x_batch, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedule):
+
+    def EBM_loss_fcn(one_key, x):
+        return TI_EBM_loss_fcn(one_key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedule)
+    
+    # Vectorize the computation over the batch dimension
+    batch_loss, batch_key = jax.vmap(EBM_loss_fcn, in_axes=(0,0))(jax.random.split(key, x_batch.shape[0]), x_batch)
+
+    # Return batch_loss and batch_key
+    return jnp.mean(batch_loss), batch_key[-1]
+
+def GEN_loss_fcn_batched(key, x_batch, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedule):
+
+    def GEN_loss_fcn(one_key, x):
+        return TI_GEN_loss_fcn(one_key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedule)
+    
+    # Vectorize the computation over the batch dimension
+    batch_loss, batch_key = jax.vmap(GEN_loss_fcn, in_axes=(0,0))(jax.random.split(key, x_batch.shape[0]), x_batch)
+
+    # Return batch_loss and batch_key
+    return jnp.mean(batch_loss), batch_key[-1]
+
 @jax.jit
 def train_step(key, x, EBM_params, GEN_params, EBM_opt_state, GEN_opt_state):
 
-    (loss_ebm, ebm_key), grad_ebm = value_and_grad(
-        EBM_loss_fcn, argnums=2, has_aux=True
-    )(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedule)
-    (loss_gen, gen_key), grad_gen = value_and_grad(
-        GEN_loss_fcn, argnums=3, has_aux=True
-    )(ebm_key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedule)
+    (loss_ebm, ebm_key), grad_ebm = value_and_grad(EBM_loss_fcn_batched, argnums=2, has_aux=True)(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedule)
+    (loss_gen, gen_key), grad_gen = value_and_grad(GEN_loss_fcn_batched, argnums=3, has_aux=True)(ebm_key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedule)
+
+    # Get mean gradient to update the parameters
+    mean_grad_ebm = jax.tree_map(lambda x: jnp.mean(x, axis=0), grad_ebm)
+    mean_grad_gen = jax.tree_map(lambda x: jnp.mean(x, axis=0), grad_gen)
 
     # Update the parameters
-    EBM_updates, EBM_opt_state = EBM_optimiser.update(grad_ebm, EBM_opt_state)
-    EBM_params = optax.apply_updates(EBM_params, EBM_updates)
+    ebm_updates, EBM_opt_state = EBM_optimiser.update(mean_grad_ebm, EBM_opt_state)
+    EBM_params = optax.apply_updates(EBM_params, ebm_updates)
+    gen_updates, GEN_opt_state = GEN_optimiser.update(mean_grad_gen, GEN_opt_state)
+    GEN_params = optax.apply_updates(GEN_params, gen_updates)
 
-    GEN_updates, GEN_opt_state = GEN_optimiser.update(grad_gen, GEN_opt_state)
-    GEN_params = optax.apply_updates(GEN_params, GEN_updates)
-
-    total_loss = loss_ebm + loss_gen
-    grad_var = get_grad_var(grad_ebm, grad_gen)
+    total_loss = loss_ebm.mean() + loss_gen.mean()
+    grad_var = get_grad_var(mean_grad_ebm, mean_grad_gen)
 
     return (
         gen_key,
@@ -89,15 +106,16 @@ def train_step(key, x, EBM_params, GEN_params, EBM_opt_state, GEN_opt_state):
 
 @jax.jit
 def validate(key, x, EBM_params, GEN_params):
-    (loss_ebm, ebm_key), grad_ebm = value_and_grad(
-        EBM_loss_fcn, argnums=3, has_aux=True
-    )(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedule)
-    (loss_gen, gen_key), grad_gen = value_and_grad(
-        GEN_loss_fcn, argnums=3, has_aux=True
-    )(ebm_key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedule)
+    (loss_ebm, ebm_key), grad_ebm = value_and_grad(EBM_loss_fcn_batched, argnums=2, has_aux=True)(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedule)
 
-    total_loss = loss_ebm + loss_gen
-    grad_var = get_grad_var(grad_ebm, grad_gen)
+    (loss_gen, gen_key), grad_gen = value_and_grad(GEN_loss_fcn_batched, argnums=3, has_aux=True)(ebm_key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedule)
+
+    # Get mean gradient to update the parameters
+    mean_grad_ebm = jax.tree_map(lambda x: jnp.mean(x, axis=0), grad_ebm)
+    mean_grad_gen = jax.tree_map(lambda x: jnp.mean(x, axis=0), grad_gen)
+
+    total_loss = loss_ebm.mean() + loss_gen.mean()
+    grad_var = get_grad_var(mean_grad_ebm, mean_grad_gen)
 
     return gen_key, total_loss, grad_var
 
@@ -106,12 +124,9 @@ def validate(key, x, EBM_params, GEN_params):
 def profile_flops(key, x, EBM_params, GEN_params):
     high.start_counters([events.PAPI_FP_OPS])
 
-    (loss_ebm, ebm_key), grad_ebm = value_and_grad(
-        EBM_loss_fcn, argnums=3, has_aux=True
-    )(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedule)
-    (loss_gen, gen_key), grad_gen = value_and_grad(
-        GEN_loss_fcn, argnums=3, has_aux=True
-    )(ebm_key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedule)
+    (loss_ebm, ebm_key), grad_ebm = value_and_grad(EBM_loss_fcn_batched, argnums=2, has_aux=True)(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedule)
+
+    (loss_gen, gen_key), grad_gen = value_and_grad(GEN_loss_fcn_batched, argnums=3, has_aux=True)(ebm_key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedule)
 
     return high.stop_counters()[0]
 
@@ -150,8 +165,8 @@ for epoch in tqdm_bar:
         }
     )
 
-    # Profile flops in first epoch
-    if epoch == 0:
+    # Profile flops in final epoch
+    if epoch == num_epochs - 1:
         flops = profile_flops(key, x, EBM_params, GEN_params)
         print(f"FLOPS: {flops}")
 

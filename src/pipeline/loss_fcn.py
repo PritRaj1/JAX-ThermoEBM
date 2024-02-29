@@ -56,7 +56,7 @@ def TI_EBM_loss_fcn(
 
     Args:
     - key: PRNG key
-    - x: batch of x samples
+    - x: sample of x
     - EBM_params: energy-based model parameters
     - GEN_params: generator parameters
     - EBM_fwd: energy-based model forward pass, --immutable
@@ -67,7 +67,7 @@ def TI_EBM_loss_fcn(
     - total_loss: the total loss for the entire thermodynamic integration loop, log(p_a(z))
     """
 
-    total_loss = jnp.zeros(x.shape[0])
+    total_loss = jnp.array(0)
 
     # Generate z_posterior for all temperatures
     key, z_posterior = sample_posterior(
@@ -98,7 +98,7 @@ def TI_EBM_loss_fcn(
         # # 1/2 * (f(x_i) + f(x_{i-1})) * ∇T
         total_loss += 0.5 * (loss_current + total_loss) * delta_T
 
-    return jnp.mean(total_loss), key
+    return total_loss, key
 
 @partial(jax.jit, static_argnums=(4,5,6))
 def TI_GEN_loss_fcn(
@@ -157,4 +157,4 @@ def TI_GEN_loss_fcn(
         # # 1/2 * (f(x_i) + f(x_{i-1})) * ∇T
         total_loss += 0.5 * (loss_current + total_loss) * delta_T
 
-    return total_loss.mean(), key
+    return total_loss, key
