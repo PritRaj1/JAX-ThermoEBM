@@ -24,9 +24,9 @@ def get_losses(
     z_channels,
     temp_schedule,
 ):
-    
+
     def get_losses_grads(x):
-        (loss_ebm, key), grad_ebm = value_and_grad(
+        (loss_ebm, ebm_key), grad_ebm = value_and_grad(
             TI_EBM_loss_fcn, argnums=3, has_aux=True
         )(
             key,
@@ -44,10 +44,10 @@ def get_losses(
             temp_schedule,
         )
 
-        (loss_gen, key), grad_gen = value_and_grad(
+        (loss_gen, gen_key), grad_gen = value_and_grad(
             TI_GEN_loss_fcn, argnums=5, has_aux=True
         )(
-            key,
+            ebm_key,
             x,
             EBM_fwd,
             EBM_params,
@@ -62,14 +62,14 @@ def get_losses(
             temp_schedule,
         )
 
-        return key, loss_ebm, grad_ebm, loss_gen, grad_gen
+        return gen_key, loss_ebm, grad_ebm, loss_gen, grad_gen
 
     key, loss_ebm, grad_ebm, loss_gen, grad_gen = jax.vmap(get_losses_grads)(x)
 
     return key, loss_ebm, grad_ebm, loss_gen, grad_gen
 
 
-@partial(jax.jit, static_argnums=(6,7))
+@partial(jax.jit, static_argnums=(6, 7))
 def update_params(
     EBM_params,
     EBM_opt_state,
