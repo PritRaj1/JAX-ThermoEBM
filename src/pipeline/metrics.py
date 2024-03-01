@@ -13,7 +13,8 @@ from torchmetrics.image.mifid import MemorizationInformedFrechetInceptionDistanc
 from torchmetrics.image.kid import KernelInceptionDistance
 from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
 
-from src.pipeline.batched_loss_fcns import EBM_loss_fcn_batched, GEN_loss_fcn_batched
+from src.pipeline.loss_fcn import ThermodynamicIntegrationLoss
+TI_loss_batched = jax.vmap(ThermodynamicIntegrationLoss, in_axes=(0, 0, None, None, None, None, None))
 
 parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")
@@ -64,8 +65,8 @@ def profile_image(x, x_pred, writer, epoch):
     grid = make_grid(x_pred[:16], nrow=4)
     writer.add_image("Generated Images", grid, epoch)
 
-def profile_flops(key, x, params_tup, fwd_fcn_tup, temp_schedule, log_path):
+# def profile_flops(key, x, params_tup, fwd_fcn_tup, temp_schedule, log_path):
 
-    with jax.profiler.trace_context(log_path):
-        (loss_ebm, ebm_key), grad_ebm = value_and_grad(EBM_loss_fcn_batched, argnums=2, has_aux=True)(key, x, *params_tup, *fwd_fcn_tup, temp_schedule)
-        (loss_gen, gen_key), grad_gen = value_and_grad(GEN_loss_fcn_batched, argnums=3, has_aux=True)(ebm_key, x, *params_tup, *fwd_fcn_tup, temp_schedule)
+#     with jax.profiler.trace_context(log_path):
+#         # Compute the loss
+#         (loss_ebm, loss_gen) = ThermodynamicIntegrationLoss(key, x, *params_tup, *fwd_fcn_tup, temp_schedule)

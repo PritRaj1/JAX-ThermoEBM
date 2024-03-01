@@ -62,11 +62,11 @@ def sample_prior(
 def sample_posterior(
     key,
     x, 
+    t,
     EBM_params,
     GEN_params,
     EBM_fwd,
-    GEN_fwd,
-    temp_schedule
+    GEN_fwd
 ):
     """
     Sample from the posterior distribution.
@@ -74,27 +74,22 @@ def sample_posterior(
     Args:
     - key: PRNG key
     - x: batch of data samples
+    - t: current temperature
     - EBM_params: energy-based model parameters
     - GEN_params: generator parameters
     - EBM_fwd: energy-based model forward pass, --immutable
     - GEN_fwd: generator forward pass, --immutable
-    - temp_schedule: temperature schedule, --immutable
 
     Returns:
     - key: PRNG key
     - z_samples: samples from the posterior distribution indexed by temperature
     """
 
-    z_samples = jnp.zeros((len(temp_schedule), 1, 1, 1, z_channels))
+    key, z = sample_prior(key, EBM_params, EBM_fwd)
 
-    for idx, t in enumerate(temp_schedule):
-        key, z = sample_p0(key)
+    for k in range(posterior_steps):
+        grad_f = posterior_grad_log(
+            z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
+        key, z = update_step(key, z, grad_f, posterior_s)
 
-        for k in range(posterior_steps):
-            grad_f = posterior_grad_log(
-                z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
-            key, z = update_step(key, z, grad_f, posterior_s)
-
-        z_samples = z_samples.at[idx].set(z)
-
-    return key, z_samples
+    return key, z

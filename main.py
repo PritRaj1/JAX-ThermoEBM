@@ -13,11 +13,11 @@ from tensorboardX import SummaryWriter
 from src.pipeline.initialise import *
 from src.pipeline.train_val import train_step, validate, generate
 from src.utils.helper_functions import get_data
-from src.pipeline.metrics import profile_flops
+# from src.pipeline.metrics import profile_flops
 
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.75"
-os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
-os.environ["XLA_FLAGS"] = "--xla_gpu_strict_conv_algorithm_picker=false --xla_gpu_force_compilation_parallelism=1"
+# os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.75"
+# os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
+# os.environ["XLA_FLAGS"] = "--xla_gpu_strict_conv_algorithm_picker=false --xla_gpu_force_compilation_parallelism=1"
 
 print(f"Device: {jax.default_backend()}")
 key = jax.random.PRNGKey(0)
@@ -95,7 +95,7 @@ for epoch in tqdm_bar:
     #     profile_flops(key, x, params_tup, fwd_fcn_tup, temp_schedule, log_path)
 
 # Generate an image
-generated_image = generate(key, params_tup, fwd_fcn_tup)
+key, generated_image = generate(key, params_tup, fwd_fcn_tup)
 
 # Plot the generated image
 plt.figure()

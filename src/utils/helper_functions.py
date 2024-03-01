@@ -49,6 +49,7 @@ def get_data(name):
     return dataset, val_dataset, str(img_dim)
 
 def get_grad_var(grad_ebm, grad_gen):
+    
      # Get gradients from grad dictionaries
     grad_ebm = jax.tree_util.tree_flatten(grad_ebm)[0]
     grad_gen = jax.tree_util.tree_flatten(grad_gen)[0]   

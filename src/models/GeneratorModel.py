@@ -16,13 +16,13 @@ class GEN(nn.Module):
         self.f = nn.activation.leaky_relu
 
         def conditional_64(z):
-            z = nn.ConvTranspose(
-                feature_dim * 2, (4, 4), (2, 2), padding="CIRCULAR", use_bias=False
-            )(z)
+            z = nn.ConvTranspose(feature_dim * 2, kernel_size=(4, 4), strides=(2, 2), padding='SAME')(z)
             z = self.f(z, negative_slope=leak_coef)
+            z = nn.ConvTranspose(output_dim, kernel_size=(4, 4), strides=(2, 2), padding='SAME')(z)
             return z
 
         def conditional_32(z):
+            z = nn.ConvTranspose(output_dim, kernel_size=(4, 4), strides=(2, 2), padding='SAME')(z)
             return z
 
         if self.image_dim == 64:
@@ -34,22 +34,16 @@ class GEN(nn.Module):
     @nn.compact
     def __call__(self, z):
 
-        z = nn.ConvTranspose(
-            feature_dim * 16, (4, 4), (4, 4), padding="CIRCULAR", use_bias=False
-        )(z)
+        z = nn.ConvTranspose(feature_dim * 16, kernel_size=(4, 4), strides=(1, 1), padding='VALID')(z)
         z = self.f(z, negative_slope=leak_coef)
-        z = nn.ConvTranspose(
-            feature_dim * 8, (4, 4), (2, 2), padding="CIRCULAR", use_bias=False
-        )(z)
+
+        z = nn.ConvTranspose(feature_dim * 8, kernel_size=(4, 4), strides=(2, 2), padding='SAME')(z)
         z = self.f(z, negative_slope=leak_coef)
-        z = nn.ConvTranspose(
-            feature_dim * 4, (4, 4), (2, 2), padding="CIRCULAR", use_bias=False
-        )(z)
+
+        z = nn.ConvTranspose(feature_dim * 4, kernel_size=(4, 4), strides=(2, 2), padding='SAME')(z)
         z = self.f(z, negative_slope=leak_coef)
+
         z = self.conditional_block(z)
-        z = nn.ConvTranspose(
-            output_dim, (4, 4), (2, 2), padding="CIRCULAR", use_bias=False
-        )(z)
         z = nn.tanh(z)
 
         return z 
