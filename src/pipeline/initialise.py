@@ -27,7 +27,7 @@ def init_EBM(key):
 
     EBM_params = EBM_model.init(key, z_init)
 
-    return EBM_params, EBM_model.apply
+    return key, EBM_params, EBM_model.apply
 
 
 def init_GEN(key, image_dim):
@@ -36,7 +36,7 @@ def init_GEN(key, image_dim):
     GEN_model = GEN(image_dim)
     GEN_params = GEN_model.init(key, z_init)
 
-    return GEN_params, GEN_model.apply
+    return key, GEN_params, GEN_model.apply
 
 
 def init_GEN_optimiser(GEN_params):

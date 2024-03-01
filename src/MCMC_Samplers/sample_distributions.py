@@ -85,7 +85,7 @@ def sample_posterior(
     - z_samples: samples from the posterior distribution indexed by temperature
     """
 
-    key, z = sample_prior(key, EBM_params, EBM_fwd)
+    key, z = sample_p0(key)
 
     for k in range(posterior_steps):
         grad_f = posterior_grad_log(

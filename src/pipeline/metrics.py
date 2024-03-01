@@ -27,7 +27,7 @@ kid = KernelInceptionDistance(feature=64, subset_size=batch_size, normalize=True
 lpips = LearnedPerceptualImagePatchSimilarity(net_type="alex", normalize=True)  # LPIPS metric
 
 def profile_image(x, x_pred, writer, epoch):
-    # # NHWC -> NCHW
+    # NHWC -> NCHW
     x = jnp.transpose(x, (0, 3, 2, 1))
     x_pred = jnp.transpose(x_pred, (0, 3, 2, 1))
 

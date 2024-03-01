@@ -15,10 +15,10 @@ from src.pipeline.train_val import train_step, validate, generate
 from src.utils.helper_functions import get_data
 # from src.pipeline.metrics import profile_flops
 
-tf.config.experimental.set_visible_devices([], "GPU")
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.7"
+# tf.config.experimental.set_visible_devices([], "GPU")
+# os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.7"
 # os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
-os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"]="platform"
+# os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"]="platform"
 # os.environ["XLA_FLAGS"] = "--xla_gpu_strict_conv_algorithm_picker=false --xla_gpu_force_compilation_parallelism=1"
 # os.environ["JAX_TRACEBACK_FILTERING"]="off"
 
@@ -44,8 +44,8 @@ val_data = torch.utils.data.Subset(val_dataset, range(num_val_data))
 test_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
 val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False)
 
-EBM_params, EBM_fwd = init_EBM(key)
-GEN_params, GEN_fwd = init_GEN(key, image_dim)
+key, EBM_params, EBM_fwd = init_EBM(key)
+key, GEN_params, GEN_fwd = init_GEN(key, image_dim)
 
 EBM_optimiser, EBM_opt_state = init_EBM_optimiser(EBM_params)
 GEN_optimiser, GEN_opt_state = init_GEN_optimiser(GEN_params)
