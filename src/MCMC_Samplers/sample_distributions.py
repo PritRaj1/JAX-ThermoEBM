@@ -31,7 +31,7 @@ def sample_p0(key):
     """Sample from the prior distribution."""
 
     key, subkey = jax.random.split(key)
-    return key, p0_sig * jax.random.normal(subkey, (1, 1, 1, z_channels)) 
+    return key, p0_sig * jax.random.normal(subkey, (1, 1, z_channels)) 
 
 
 def sample_prior(

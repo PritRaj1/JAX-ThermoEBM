@@ -9,3 +9,4 @@ matplotlib
 tqdm
 seaborn
 tensorboardX
+jax_dataloader

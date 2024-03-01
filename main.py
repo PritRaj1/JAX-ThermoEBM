@@ -4,7 +4,6 @@ import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import os
 import torch
-from torch.utils.data import DataLoader
 import configparser
 import tqdm
 from tensorboardX import SummaryWriter
@@ -12,7 +11,8 @@ import tensorflow as tf
 
 from src.pipeline.initialise import *
 from src.pipeline.train_val import train_step, validate, generate
-from src.utils.helper_functions import get_data
+from src.utils.helper_functions import get_data, NumpyLoader
+
 # from src.pipeline.metrics import profile_flops
 
 # tf.config.experimental.set_visible_devices([], "GPU")
@@ -41,8 +41,8 @@ train_data = torch.utils.data.Subset(dataset, range(num_train_data))
 val_data = torch.utils.data.Subset(val_dataset, range(num_val_data))
 
 # Split dataset
-test_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
-val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False)
+test_loader = NumpyLoader(train_data, batch_size=batch_size, shuffle=True)
+val_loader = NumpyLoader(val_data, batch_size=batch_size, shuffle=False)
 
 key, EBM_params, EBM_fwd = init_EBM(key)
 key, GEN_params, GEN_fwd = init_GEN(key, image_dim)
@@ -57,7 +57,13 @@ fwd_fcn_tup = (EBM_fwd, GEN_fwd)
 optimiser_tup = (EBM_optimiser, GEN_optimiser)
 opt_state_tup = (EBM_opt_state, GEN_opt_state)
 
-log_path = f'logs/{data_set_name}/{temp_schedule[0]}'
+log_path = f"logs/{data_set_name}/{temp_schedule[0]}"
+
+# Output number of parameters of generator
+EBM_param_count = sum(x.size for x in jax.tree_util.tree_leaves(EBM_params))
+GEN_param_count = sum(x.size for x in jax.tree_util.tree_leaves(GEN_params))
+print(f"Number of parameters in generator: {GEN_param_count}")
+print(f"Number of parameters in EBM: {EBM_param_count}")
 
 # Train the model
 tqdm_bar = tqdm.tqdm(range(num_epochs))
@@ -68,8 +74,6 @@ for epoch in tqdm_bar:
     val_grad_var = 0
     for batch in test_loader:
         x, _ = batch
-        x = jnp.array(x.numpy())
-        x = jnp.transpose(x, (0, 3, 2, 1))
         key, params_tup, opt_state_tup, loss, grad_var = train_step(
             key, x, params_tup, opt_state_tup, optimiser_tup, fwd_fcn_tup, temp_schedule
         )
@@ -78,8 +82,6 @@ for epoch in tqdm_bar:
 
     for batch in val_loader:
         x, _ = batch
-        x = jnp.array(x.numpy())
-        x = jnp.transpose(x, (0, 3, 2, 1))
         key, loss, grad_var = validate(key, x, params_tup, fwd_fcn_tup, temp_schedule)
         val_loss += loss
         val_grad_var += grad_var
