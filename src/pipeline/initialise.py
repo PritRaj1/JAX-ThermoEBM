@@ -27,9 +27,7 @@ def init_EBM(key):
 
     EBM_params = EBM_model.init(key, z_init)
 
-    EBM_fwd = jax.vmap(EBM_model.apply, in_axes=(None, 0))
-
-    return EBM_params, EBM_fwd
+    return EBM_params, EBM_model.apply
 
 
 def init_GEN(key, image_dim):
@@ -38,9 +36,7 @@ def init_GEN(key, image_dim):
     GEN_model = GEN(image_dim)
     GEN_params = GEN_model.init(key, z_init)
 
-    GEN_fwd = jax.vmap(GEN_model.apply, in_axes=(None, 0))
-
-    return GEN_params, GEN_fwd
+    return GEN_params, GEN_model.apply
 
 
 def init_GEN_optimiser(GEN_params):

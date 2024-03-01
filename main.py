@@ -6,18 +6,21 @@ import os
 import torch
 from torch.utils.data import DataLoader
 import configparser
-from pypapi import events, papi_high as high
 import tqdm
 from tensorboardX import SummaryWriter
+import tensorflow as tf
 
 from src.pipeline.initialise import *
 from src.pipeline.train_val import train_step, validate, generate
 from src.utils.helper_functions import get_data
 # from src.pipeline.metrics import profile_flops
 
-# os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.75"
+tf.config.experimental.set_visible_devices([], "GPU")
+os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.7"
 # os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
+os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"]="platform"
 # os.environ["XLA_FLAGS"] = "--xla_gpu_strict_conv_algorithm_picker=false --xla_gpu_force_compilation_parallelism=1"
+# os.environ["JAX_TRACEBACK_FILTERING"]="off"
 
 print(f"Device: {jax.default_backend()}")
 key = jax.random.PRNGKey(0)

@@ -1,4 +1,5 @@
 import flax.linen as nn
+import jax.numpy as jnp
 import configparser
 
 parser = configparser.ConfigParser()

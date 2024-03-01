@@ -1,6 +1,5 @@
 import jax
 import jax.numpy as jnp
-from jax import value_and_grad
 from functools import partial
 import optax
 import configparser
@@ -30,17 +29,15 @@ def train_step(key, x, params_tup, opt_state_tup, optimiser_tup, fwd_fcn_tup, te
     key_batch = jax.random.split(key, batch_size + 1)
     key, sub_key_batch = key_batch[0], key_batch[1:]
 
-    Jacob = Jacob = jax.jacfwd(TI_loss_batched, argnums=(2,3))(sub_key_batch, x, *params_tup, *fwd_fcn_tup, temp_schedule)
+    # with jax.profiler.trace("/tmp/jax-trace", create_perfetto_link=True):
+    Jacob = jax.jacfwd(TI_loss_batched, argnums=(2,3))(sub_key_batch, x, *params_tup, *fwd_fcn_tup, temp_schedule)
+
     grad_ebm = Jacob[0] # [ [ L_e/dθ1, L_e/dθ2, ... ], [ L_g/dθ1, L_g/dθ2, ... ] ]
     grad_gen = Jacob[1] # [ [ L_e/dΨ1, L_e/dΨ2, ... ], [ L_g/dΨ1, L_g/dΨ2, ... ] ]
 
-    # Get mean gradient across all items in batch
-    grad_ebm = jax.tree_map(lambda x: jnp.mean(x, axis=0), grad_ebm)
-    grad_gen = jax.tree_map(lambda x: jnp.mean(x, axis=0), grad_gen)
-
-    # Extract L_e w.r.t θ and L_g w.r.t Ψ
-    grad_ebm = jax.tree_map(lambda x: x[0], grad_ebm)
-    grad_gen = jax.tree_map(lambda x: x[1], grad_gen)
+    # Get mean gradient across all items in batch, and extract L_e w.r.t θ and L_g w.r.t Ψ
+    grad_ebm = jax.tree_map(lambda x: jnp.mean(x, axis=0)[0], grad_ebm)
+    grad_gen = jax.tree_map(lambda x: jnp.mean(x, axis=0)[1], grad_gen)
 
     grad_list = [grad_ebm, grad_gen]
     
@@ -56,6 +53,8 @@ def train_step(key, x, params_tup, opt_state_tup, optimiser_tup, fwd_fcn_tup, te
 
     total_loss = losses.mean(axis=0).sum() # L_e + L_g
     grad_var = get_grad_var(*grad_list)
+
+    # print(f"Total Loss: {total_loss}, Grad Var: {grad_var}")
 
     return (
         key,
@@ -80,17 +79,13 @@ def validate(key, x, params_tup, fwd_fcn_tup, temp_schedule):
     key_batch = jax.random.split(key, batch_size + 1)
     key, sub_key_batch = key_batch[0], key_batch[1:]
     
-    Jacob = Jacob = jax.jacfwd(TI_loss_batched, argnums=(2,3))(sub_key_batch, x, *params_tup, *fwd_fcn_tup, temp_schedule)
+    Jacob = jax.jacfwd(TI_loss_batched, argnums=(2,3))(sub_key_batch, x, *params_tup, *fwd_fcn_tup, temp_schedule)
     grad_ebm = Jacob[0] # [ [ L_e/dθ1, L_e/dθ2, ... ], [ L_g/dθ1, L_g/dθ2, ... ] ]
     grad_gen = Jacob[1] # [ [ L_e/dΨ1, L_e/dΨ2, ... ], [ L_g/dΨ1, L_g/dΨ2, ... ] ]
 
-    # Get mean gradient across all items in batch
-    grad_ebm = jax.tree_map(lambda x: jnp.mean(x, axis=0), grad_ebm)
-    grad_gen = jax.tree_map(lambda x: jnp.mean(x, axis=0), grad_gen)
-
-    # Extract L_e w.r.t θ and L_g w.r.t Ψ
-    grad_ebm = jax.tree_map(lambda x: x[0], grad_ebm)
-    grad_gen = jax.tree_map(lambda x: x[1], grad_gen)
+    # Get mean gradient across all items in batch, and extract L_e w.r.t θ and L_g w.r.t Ψ
+    grad_ebm = jax.tree_map(lambda x: jnp.mean(x, axis=0)[0], grad_ebm)
+    grad_gen = jax.tree_map(lambda x: jnp.mean(x, axis=0)[1], grad_gen)
 
     total_loss = losses.mean(axis=0).sum() # L_e + L_g
     grad_var = get_grad_var(grad_ebm, grad_gen)
