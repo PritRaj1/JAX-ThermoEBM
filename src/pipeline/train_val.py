@@ -15,7 +15,7 @@ batch_size = int(parser["PIPELINE"]["BATCH_SIZE"])
 
 TI_loss_batched = jax.vmap(ThermodynamicIntegrationLoss, in_axes=(0, 0, None, None, None, None, None))
 
-@partial(jax.jit, static_argnums=(4,5,6))
+@partial(jax.jit, static_argnums=(4,5))
 def train_step(key, x, params_tup, opt_state_tup, optimiser_tup, fwd_fcn_tup, temp_schedule):
 
     # Split the key for batched operations
@@ -65,7 +65,7 @@ def train_step(key, x, params_tup, opt_state_tup, optimiser_tup, fwd_fcn_tup, te
     )
 
 
-@partial(jax.jit, static_argnums=(3,4))
+@partial(jax.jit, static_argnums=(3,))
 def validate(key, x, params_tup, fwd_fcn_tup, temp_schedule):
 
     # Split the key for batched operations

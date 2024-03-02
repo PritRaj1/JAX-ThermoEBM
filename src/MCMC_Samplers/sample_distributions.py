@@ -2,6 +2,7 @@ import jax
 import jax.numpy as jnp
 from functools import partial
 import configparser
+from jax.lax import fori_loop
 
 from src.MCMC_Samplers.grad_log_probs import prior_grad_log, posterior_grad_log
 
@@ -50,13 +51,15 @@ def sample_prior(
     - z: latent space variable sampled from p_a(x)
     """
 
-    key, z = sample_p0(key)
-
-    for k in range(prior_steps):
+    def MCMC_steps(i, key_z):
+        key, z = key_z
         grad_f = prior_grad_log(z, EBM_params, EBM_fwd)
         key, z = update_step(key, z, grad_f, prior_s)
+        return key, z
 
-    return key, z
+    key0, z0 = sample_p0(key)
+    final_key, final_z = fori_loop(0, prior_steps, MCMC_steps, (key0, z0))
+    return final_key, final_z
 
 
 def sample_posterior(
@@ -85,11 +88,12 @@ def sample_posterior(
     - z_samples: samples from the posterior distribution indexed by temperature
     """
 
-    key, z = sample_p0(key)
-
-    for k in range(posterior_steps):
-        grad_f = posterior_grad_log(
-            z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
+    def MCMC_steps(i, key_z):
+        key, z = key_z
+        grad_f = posterior_grad_log(z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
         key, z = update_step(key, z, grad_f, posterior_s)
+        return key, z
 
-    return key, z
+    key0, z0 = sample_p0(key)
+    final_key, final_z = fori_loop(0, posterior_steps, MCMC_steps, (key0, z0))
+    return final_key, final_z

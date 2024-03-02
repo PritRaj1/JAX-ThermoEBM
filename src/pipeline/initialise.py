@@ -1,5 +1,5 @@
 import jax
-import numpy as np
+import jax.numpy as jnp
 import configparser
 import optax
 
@@ -27,7 +27,9 @@ def init_EBM(key):
 
     EBM_params = EBM_model.init(key, z_init)
 
-    return key, EBM_params, EBM_model.apply
+    GEN_fwd = jax.jit(EBM_model.apply)
+
+    return key, EBM_params, GEN_fwd
 
 
 def init_GEN(key, image_dim):
@@ -36,7 +38,9 @@ def init_GEN(key, image_dim):
     GEN_model = GEN(image_dim)
     GEN_params = GEN_model.init(key, z_init)
 
-    return key, GEN_params, GEN_model.apply
+    GEN_fwd = jax.jit(GEN_model.apply)
+
+    return key, GEN_params, GEN_fwd
 
 
 def init_GEN_optimiser(GEN_params):
@@ -58,10 +62,10 @@ def init_EBM_optimiser(EBM_params):
 def init_temp_schedule():
     if temp_power >= 1:
         print("Using Temperature Schedule with Power: {}".format(temp_power))
-        temp = tuple(np.linspace(0, 1, num_temps) ** temp_power)
+        temp = jnp.linspace(0, 1, num_temps) ** temp_power
 
     else:
         print("Using no Thermodynamic Integration, defaulting to Vanilla Model")
-        temp = (1,)
+        temp = jnp.array([1])
 
     return temp
