@@ -16,7 +16,7 @@ from src.utils.helper_functions import get_data, NumpyLoader
 # from src.pipeline.metrics import profile_flops
 
 # tf.config.experimental.set_visible_devices([], "GPU")
-# os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.7"
+os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.9"
 # os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 # os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"]="platform"
 # os.environ["XLA_FLAGS"] = "--xla_gpu_strict_conv_algorithm_picker=false --xla_gpu_force_compilation_parallelism=1"
@@ -72,7 +72,7 @@ for epoch in tqdm_bar:
     train_grad_var = 0
     val_loss = 0
     val_grad_var = 0
-    for batch in tqdm.tqdm(test_loader):
+    for batch in test_loader:
         x, _ = batch
         key, params_tup, opt_state_tup, loss, grad_var = train_step(
             key, x, params_tup, opt_state_tup, optimiser_tup, fwd_fcn_tup, temp_schedule

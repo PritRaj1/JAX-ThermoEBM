@@ -46,13 +46,19 @@ def get_data(name):
 
     class Resize_Normalise(object):
         def __call__(self, pic):
-            # return np.ravel(np.array(pic, dtype=jnp.float32))
 
             # Resize
             pic = pic.resize((img_dim, img_dim))
 
+            # Cast to [0, 1]
+            pic = np.array(pic, dtype=jnp.float32) / 255
+
             # Normalise
-            return (np.array(pic, dtype=jnp.float32) - 127.5) / 127.5            
+            mean = jnp.mean(pic)
+            std = jnp.std(pic)
+            pic = (pic - mean) / std
+
+            return pic        
 
     if name == "CIFAR10":
         data = {
