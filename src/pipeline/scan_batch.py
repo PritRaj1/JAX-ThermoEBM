@@ -27,7 +27,7 @@ def train_epoch(
     - temp_schedule: temperature schedule
     """
 
-    @jax.jit
+    #@jax.jit
     def train_batch(carry, idx):
         key, params_old, opt_state_old = carry
         x, _ = next(iter(train_loader))
@@ -42,7 +42,7 @@ def train_epoch(
         f=train_batch, init=initial_state_train, xs=None, length=len(train_loader)
     )
 
-    return final_key, final_params, final_opt_state, jnp.sum(losses), jnp.sum(grads)
+    return final_key, final_params, final_opt_state, jnp.mean(losses), jnp.mean(grads)
 
 
 def val_epoch(init_key, val_loader, params_tup, fwd_fcn_tup, temp_schedule):
@@ -59,4 +59,4 @@ def val_epoch(init_key, val_loader, params_tup, fwd_fcn_tup, temp_schedule):
         f=val_batch, init=init_key, xs=None, length=len(val_loader)
     )
 
-    return final_key, jnp.sum(losses), jnp.sum(grads)
+    return final_key, jnp.mean(losses), jnp.mean(grads)

@@ -25,7 +25,7 @@ def ebm_loss(z_prior, z_posterior, EBM_params, EBM_fwd):
 
     difference = en_pos - en_neg
 
-    return difference.sum()
+    return difference.mean()
 
 
 def gen_loss(key, x, z, GEN_params, GEN_fwd):
@@ -38,13 +38,13 @@ def gen_loss(key, x, z, GEN_params, GEN_fwd):
     # Generate a sample from the generator
     x_pred = GEN_fwd(GEN_params, z) + (pl_sig * jax.random.normal(subkey, x.shape))
 
-    # Sum of element-wise squared differences (l2 norm squared)
-    sqr_err = jnp.sum((x - x_pred) ** 2)
+    # Compute the mean squared difference
+    mse = jnp.mean((x - x_pred) ** 2)
 
     # Compute -log[ p_β(x | z) ] = 1/2 * (x - g(z))^2 / σ^2
-    log_lkhood = sqr_err / (2.0 * pl_sig**2)
+    log_lkhood = mse / (2.0 * pl_sig**2)
 
-    return key, log_lkhood.sum()
+    return key, log_lkhood.mean()
 
 
 def ThermoEBM_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedule):
@@ -99,7 +99,7 @@ def ThermoEBM_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedu
 
     (_, _, _), temp_losses = scan(f=loss, init=initial_state, xs=temp_schedule)
 
-    return temp_losses.sum()
+    return temp_losses.mean()
 
 
 def ThermoGEN_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedule):

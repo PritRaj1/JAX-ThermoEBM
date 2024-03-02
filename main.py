@@ -29,7 +29,7 @@ os.environ["XLA_FLAGS"] = "--xla_gpu_strict_conv_algorithm_picker=false --xla_gp
 # os.environ["JAX_TRACEBACK_FILTERING"]="off"
 # os.environ["JAX_DEBUG_NANS"]="True"
 # config.update("jax_debug_nans", True)
-config.update("jax_enable_x64", True)
+# config.update("jax_enable_x64", True)
 
 print(f"Device: {jax.default_backend()}")
 key = jax.random.PRNGKey(0)
@@ -68,6 +68,7 @@ opt_state_tup = (EBM_opt_state, GEN_opt_state)
 
 log_path = f"logs/{data_set_name}/{temp_schedule[0]}"
 os.makedirs('images', exist_ok=True)
+os.makedirs("logs", exist_ok=True)
 
 # Output number of parameters of generator
 EBM_param_count = sum(x.size for x in jax.tree_util.tree_leaves(EBM_params))
@@ -87,6 +88,8 @@ for epoch in tqdm_bar:
         fwd_fcn_tup,
         temp_schedule,
     )
+    train_grad_var.block_until_ready()
+
 
     key, val_loss, val_grad_var = val_epoch(
         key, val_loader, params_tup, fwd_fcn_tup, temp_schedule
@@ -103,10 +106,10 @@ for epoch in tqdm_bar:
 
     tqdm_bar.set_postfix(
         {
-            "Train Loss": train_loss / len(train_data),
-            "Val Loss": val_loss / len(val_data),
-            "Train Grad Var": train_grad_var / len(train_data),
-            "Val Grad Var": val_grad_var / len(val_data),
+            "Train Loss": train_loss,
+            "Val Loss": val_loss,
+            "Train Grad Var": train_grad_var,
+            "Val Grad Var": val_grad_var
         }
     )
 

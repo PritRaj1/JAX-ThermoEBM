@@ -63,9 +63,11 @@ def init_temp_schedule():
     if temp_power >= 1:
         print("Using Temperature Schedule with Power: {}".format(temp_power))
         temp = jnp.linspace(0, 1, num_temps) ** temp_power
+        print("Temperature Schedule: {}".format(temp))
 
     else:
         print("Using no Thermodynamic Integration, defaulting to Vanilla Model")
         temp = jnp.array([1])
+        print("Temperature Schedule: {}".format(temp))
 
     return temp

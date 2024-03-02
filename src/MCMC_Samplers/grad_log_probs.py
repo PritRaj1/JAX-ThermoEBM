@@ -27,10 +27,11 @@ def prior_grad_log(z, EBM_params, EBM_fwd):
 
         f_z = EBM_fwd(EBM_params, z)
 
-        return f_z.sum() # Sum across channels 
+        return f_z.mean() # Mean across channels 
 
     # Find the gradient of the f_a(z) w.r.t. each z
     grad_f = jax.grad(EBM_fcn)(z)
+    
 
     return grad_f - (z / (p0_sig**2))
 
@@ -55,11 +56,11 @@ def posterior_grad_log(z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     def log_llood_fcn(z, x):
         g_z = GEN_fwd(GEN_params, z)
 
-        # Sum of element-wise squared differences (l2 norm squared)
-        sqr_err = jnp.sum((x - g_z)**2) 
+        # Mean squared difference between x and g(z)
+        mse = jnp.mean((x - g_z)**2) 
 
         # Compute -log[ p_β(x | z)^t ] ∝ -t * [ (x - g(z))^2 / (2 * σ^2) ]
-        log_lkhood = -t * (sqr_err) / (2 * pl_sig**2)
+        log_lkhood = -t * (mse) / (2 * pl_sig**2)
 
         return log_lkhood
 

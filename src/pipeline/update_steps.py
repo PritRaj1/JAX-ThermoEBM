@@ -55,7 +55,7 @@ def update_params(optimiser_tup, grad_list, opt_state_tup, params_tup):
     ebm_updates, new_ebm_opt_state = optimiser_tup[0].update(
         grad_list[0], opt_state_tup[0]
     )
-
+    
     gen_updates, new_gen_opt_state = optimiser_tup[1].update(
         grad_list[1], opt_state_tup[1]
     )
