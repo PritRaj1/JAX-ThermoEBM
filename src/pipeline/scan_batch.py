@@ -27,38 +27,33 @@ def train_epoch(
     """
 
     def train_batch(carry, idx):
-        key, params_old, opt_state_old, train_loss, train_grad_var = carry
+        key, params_old, opt_state_old = carry
         x, _ = next(iter(train_loader))
         key, params_new, opt_state_new, loss, grad_var = train_step(
             key, x, params_old, opt_state_old, optimiser_tup, fwd_fcn_tup, temp_schedule
         )
-        train_loss += loss
-        train_grad_var += grad_var
-        return (key, params_new, opt_state_new, train_loss, train_grad_var), None
+        return (key, params_new, opt_state_new), (loss, grad_var)
 
-    initial_state_train = (key, initial_params_tup, initial_opt_state_tup, 0, 0)
+    initial_state_train = (key, initial_params_tup, initial_opt_state_tup)
 
-    (final_key, final_params, final_opt_state, train_loss, train_grad_var), _ = lax.scan(
-        train_batch, initial_state_train, jnp.arange(len(train_loader))
+    (final_key, final_params, final_opt_state), (losses, grads) = lax.scan(
+        f=train_batch, init=initial_state_train, xs=None, length=len(train_loader)
     )
 
-    return final_key, final_params, final_opt_state, train_loss, train_grad_var
+    return final_key, final_params, final_opt_state, jnp.sum(losses), jnp.sum(grads)
 
 
-def val_epoch(key, val_loader, params_tup, fwd_fcn_tup, temp_schedule):
+def val_epoch(init_key, val_loader, params_tup, fwd_fcn_tup, temp_schedule):
 
     def val_batch(carry, idx):
-        key, val_loss, val_grad_var = carry
+        key = carry
         x, _ = next(iter(val_loader))
         key, loss, grad_var = validate(key, x, params_tup, fwd_fcn_tup, temp_schedule)
-        val_loss += loss
-        val_grad_var += grad_var
-        return (key, val_loss, val_grad_var), None
 
-    initial_state_val = (key, 0, 0)
+        return key, (loss, grad_var)
 
-    (final_key, val_loss, val_grad_var), _ = lax.scan(
-        val_batch, initial_state_val, jnp.arange(len(val_loader))
+    final_key, (losses, grads) = lax.scan(
+        f=val_batch, init=init_key, xs=None, length=len(val_loader)
     )
 
-    return final_key, val_loss, val_grad_var
+    return final_key, jnp.sum(losses), jnp.sum(grads)

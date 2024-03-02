@@ -1,14 +1,10 @@
 import jax
-from jax import value_and_grad
-import jax.numpy as jnp
 import numpy as np
 import matplotlib.pyplot as plt
 import os
 import torch
 import configparser
 import tqdm
-from tensorboardX import SummaryWriter
-import tensorflow as tf
 
 from src.pipeline.initialise import *
 from src.pipeline.scan_batch import train_epoch, val_epoch
@@ -23,6 +19,7 @@ os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"]="platform"
 os.environ["XLA_FLAGS"] = "--xla_gpu_strict_conv_algorithm_picker=false --xla_gpu_force_compilation_parallelism=1"
 # os.environ["JAX_TRACEBACK_FILTERING"]="off"
+os.environ["JAX_DEBUG_NANS"]="True"
 
 print(f"Device: {jax.default_backend()}")
 key = jax.random.PRNGKey(0)
