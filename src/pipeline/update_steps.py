@@ -37,13 +37,13 @@ def get_losses_and_grads(key, x, params_tup, fwd_fcn_tup, temp_schedule):
     return loss_ebm, grad_ebm, loss_gen, grad_gen
 
 
-def update_params(optimiser_tup, batch_grad_list, opt_state_tup, params_tup):
+def update_params(optimiser_tup, grad_list, opt_state_tup, params_tup):
     """
     Function to update the parameters of the models.
 
     Args:
     - optimiser_tup: tuple of optimisers
-    - batch_grad_list: list of batch gradients
+    - grad_list: list of gradients
     - opt_state_tup: tuple of optimiser states
     - params_tup: tuple of model parameters
 
@@ -52,18 +52,18 @@ def update_params(optimiser_tup, batch_grad_list, opt_state_tup, params_tup):
     - new_opt_states: tuple of updated optimiser states
     """
 
-    new_opt_states = []
-    new_params_set = []
+    ebm_updates, new_ebm_opt_state = optimiser_tup[0].update(
+        grad_list[0], opt_state_tup[0]
+    )
 
-    # Update the parameters
-    for i in range(len(optimiser_tup)):
-        grad = jax.tree_util.tree_map(lambda x: x.mean(0), batch_grad_list[i])
-        updates, new_opt_state = optimiser_tup[i].update(grad, opt_state_tup[i])
-        new_params = optax.apply_updates(params_tup[i], updates)
-        new_opt_states.append(new_opt_state)
-        new_params_set.append(new_params)
+    gen_updates, new_gen_opt_state = optimiser_tup[1].update(
+        grad_list[1], opt_state_tup[1]
+    )
 
-    return tuple(new_params_set), tuple(new_opt_states)
+    new_ebm_params = optax.apply_updates(params_tup[0], ebm_updates)
+    new_gen_params = optax.apply_updates(params_tup[1], gen_updates)
+
+    return (new_ebm_params, new_gen_params), (new_ebm_opt_state, new_gen_opt_state)
 
 
 def generate(key, params_tup, fwd_fcn_tup):
@@ -73,11 +73,7 @@ def generate(key, params_tup, fwd_fcn_tup):
     return key, x_pred[0]
 
 
-def get_grad_var(batch_grad_ebm, batch_grad_gen):
-
-    # Take mean across batch
-    grad_ebm = jax.tree_util.tree_map(lambda x: x.mean(0), batch_grad_ebm)
-    grad_gen = jax.tree_util.tree_map(lambda x: x.mean(0), batch_grad_gen)
+def get_grad_var(grad_ebm, grad_gen):
 
     # Get gradients from grad dictionaries
     grad_ebm = jax.tree_util.tree_flatten(grad_ebm)[0]

@@ -27,7 +27,7 @@ def prior_grad_log(z, EBM_params, EBM_fwd):
 
         f_z = EBM_fwd(EBM_params, z)
 
-        return f_z.sum() # Sum across pixels 
+        return f_z.sum() # Sum across channels 
 
     # Find the gradient of the f_a(z) w.r.t. each z
     grad_f = jax.grad(EBM_fcn)(z)

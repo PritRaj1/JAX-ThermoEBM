@@ -30,17 +30,19 @@ def train_step(
         sub_key_batch, x, params_tup, fwd_fcn_tup, temp_schedule
     )
 
-    batch_grad_list = [batch_grad_e, batch_grad_g]
-    new_opt_states = []
-    new_params_set = []
+    # Take mean across batch
+    grad_ebm = jax.tree_util.tree_map(lambda x: x.mean(0), batch_grad_e)
+    grad_gen = jax.tree_util.tree_map(lambda x: x.mean(0), batch_grad_g)
+
+    grad_list = [grad_ebm, grad_gen]
 
     # Update the parameters
     params_tup, opt_state_tup = update_params(
-        optimiser_tup, batch_grad_list, opt_state_tup, params_tup
+        optimiser_tup, grad_list, opt_state_tup, params_tup
     )
 
     total_loss = batch_loss_e.mean() + batch_loss_g.mean()  # L_e + L_g
-    grad_var = get_grad_var(*batch_grad_list)
+    grad_var = get_grad_var(*grad_list)
 
     # print(f"Total Loss: {total_loss}, Grad Var: {grad_var}")
 
@@ -59,7 +61,11 @@ def validate(key, x, params_tup, fwd_fcn_tup, temp_schedule):
         sub_key_batch, x, params_tup, fwd_fcn_tup, temp_schedule
     )
 
+    # Take mean across batch
+    grad_ebm = jax.tree_util.tree_map(lambda x: x.mean(0), batch_grad_e)
+    grad_gen = jax.tree_util.tree_map(lambda x: x.mean(0), batch_grad_g)
+
     total_loss = batch_loss_e.mean() + batch_loss_g.mean()  # L_e + L_g
-    grad_var = get_grad_var(batch_grad_e, batch_grad_g)
+    grad_var = get_grad_var(grad_ebm, grad_gen)
 
     return key, total_loss, grad_var

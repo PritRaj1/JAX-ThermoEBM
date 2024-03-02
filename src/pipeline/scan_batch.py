@@ -47,7 +47,7 @@ def train_epoch(
 
 def val_epoch(init_key, val_loader, params_tup, fwd_fcn_tup, temp_schedule):
 
-    @jax.jit
+    #@jax.jit
     def val_batch(carry, idx):
         key = carry
         x, _ = next(iter(val_loader))

@@ -1,4 +1,5 @@
 import jax
+from jax import config
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -14,12 +15,21 @@ from src.utils.helper_functions import get_data, NumpyLoader
 # from src.pipeline.metrics import profile_flops
 
 # tf.config.experimental.set_visible_devices([], "GPU")
-# os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.4"
-os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
-os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"]="platform"
+os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.98"
+# os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
+# os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"]="platform"
 os.environ["XLA_FLAGS"] = "--xla_gpu_strict_conv_algorithm_picker=false --xla_gpu_force_compilation_parallelism=1"
+# os.environ['XLA_FLAGS'] = (
+#     '--xla_gpu_enable_triton_softmax_fusion=true '
+#     '--xla_gpu_triton_gemm_any=True '
+#     '--xla_gpu_enable_async_collectives=true '
+#     '--xla_gpu_enable_latency_hiding_scheduler=true '
+#     '--xla_gpu_enable_highest_priority_async_stream=true '
+# )
 # os.environ["JAX_TRACEBACK_FILTERING"]="off"
-os.environ["JAX_DEBUG_NANS"]="True"
+# os.environ["JAX_DEBUG_NANS"]="True"
+# config.update("jax_debug_nans", True)
+config.update("jax_enable_x64", True)
 
 print(f"Device: {jax.default_backend()}")
 key = jax.random.PRNGKey(0)
