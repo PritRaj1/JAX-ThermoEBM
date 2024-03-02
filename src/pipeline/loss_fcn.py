@@ -23,8 +23,9 @@ def ebm_loss(z_prior, z_posterior, EBM_params, EBM_fwd):
     # Compute the energy of the prior sample
     en_neg = EBM_fwd(EBM_params, z_prior)
 
-    # Return the difference in energies
-    return jnp.mean(en_pos - en_neg, axis=-1).sum()
+    difference = en_pos - en_neg
+
+    return difference.sum()
 
 
 def gen_loss(key, x, z, GEN_params, GEN_fwd):
@@ -32,81 +33,122 @@ def gen_loss(key, x, z, GEN_params, GEN_fwd):
     Function to compute MSE loss for the GEN model.
     """
 
-    # Compute -log[ p_β(x | z) ]; max likelihood training
     key, subkey = jax.random.split(key)
+
+    # Generate a sample from the generator
     x_pred = GEN_fwd(GEN_params, z) + (pl_sig * jax.random.normal(subkey, x.shape))
-    log_lkhood = (jnp.linalg.norm(x - x_pred, axis=(1, 2)) ** 2) / (2.0 * pl_sig**2)
-    log_lkhood = jnp.mean(log_lkhood, axis=-1)
+
+    # Sum of element-wise squared differences (l2 norm squared)
+    sqr_err = jnp.sum((x - x_pred) ** 2)
+
+    # Compute -log[ p_β(x | z) ] = 1/2 * (x - g(z))^2 / σ^2
+    log_lkhood = sqr_err / (2.0 * pl_sig**2)
 
     return key, log_lkhood.sum()
 
 
 def ThermoEBM_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedule):
+    """
+    Function to compute the themodynamic integration loss for the EBM model.
+    Please see "discretised thermodynamic integration" using trapezoid rule
+    in https://doi.org/10.1016/j.csda.2009.07.025 for details.
 
-    # Prepend 0 to the temperature schedule, for unconditional ∇T calculation
-    temp_schedule = jnp.concatenate([jnp.array([0]), temp_schedule])
+    To integrate over temperatures, we use the trapezoid rule:
+    ∫[a, b] f(x) dx ≈ 1/2 * (f(a) + f(b)) * ∇T
+    We accumulate this in a scan loop over the temperature schedule.
+    This is then summed at the end to compute the integral over the temperature schedule.
 
-    def loss(carry, i):
-        key_i, total_loss_ebm = carry
+    Args:
+    - key: PRNG key
+    - x: batch of data samples
+    - EBM_params: energy-based model parameters
+    - GEN_params: generator parameters
+    - EBM_fwd: energy-based model forward pass, --immutable
+    - GEN_fwd: generator forward pass, --immutable
+    - temp_schedule: temperature schedule
 
-        # Sample from the prior and posterior distributions
+    Returns:
+    - total_loss: the total EBM loss for the entire thermodynamic integration loop, log(p_a(z))
+    """
+
+    def loss(carry, t):
+
+        # Extract the key, temperature, and loss carried from the previous temperature
+        key_i, t_prev, loss_prev = carry
+
+        # Sample from the prior distribution
         key_i, z_prior = sample_prior(key_i, EBM_params, EBM_fwd)
+
+        # Sample from the posterior distribution tempered by the current temperature
         key_i, z_posterior = sample_posterior(
-            key_i, x, temp_schedule[i], EBM_params, GEN_params, EBM_fwd, GEN_fwd
+            key_i, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd
         )
 
-        # Compute the loss for both models
-        loss_current_ebm = ebm_loss(z_prior, z_posterior, EBM_params, EBM_fwd)
+        # Compute the current loss
+        current_loss = ebm_loss(z_prior, z_posterior, EBM_params, EBM_fwd)
 
         # ∇T = t_i - t_{i-1}
-        delta_T = temp_schedule[i] - temp_schedule[i - 1]
+        delta_T = t - t_prev
 
-        # # 1/2 * (f(x_i) + f(x_{i-1})) * ∇T
-        total_loss_ebm += 0.5 * (loss_current_ebm + total_loss_ebm) * delta_T
+        # Accumulate 1/2 * (f(x_i) + f(x_{i-1})) * ∇T
+        temperature_loss = 0.5 * (current_loss + loss_prev) * delta_T
 
-        return (key_i, total_loss_ebm), None
+        return (key_i, t, current_loss), temperature_loss
 
-    total_loss_ebm = 0
+    initial_state = (key, 0, 0)
 
-    initial_state = (key, total_loss_ebm)
+    (_, _, _), temp_losses = scan(f=loss, init=initial_state, xs=temp_schedule)
 
-    (_, final_loss_ebm), _ = scan(
-        loss, initial_state, jnp.arange(1, len(temp_schedule))
-    )
-
-    return final_loss_ebm
+    return temp_losses.sum()
 
 
 def ThermoGEN_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedule):
+    """
+    Function to compute the themodynamic integration loss for the GEN model.
+    Please see "discretised thermodynamic integration" using trapezoid rule
+    in https://doi.org/10.1016/j.csda.2009.07.025 for details.
 
-    # Prepend 0 to the temperature schedule, for unconditional ∇T calculation
-    temp_schedule = jnp.concatenate([jnp.array([0]), temp_schedule])
+    To integrate over temperatures, we use the trapezoid rule:
+    ∫[a, b] f(x) dx ≈ 1/2 * (f(a) + f(b)) * ∇T
+    We accumulate this in a scan loop over the temperature schedule.
+    This is then summed at the end to compute the integral over the temperature schedule.
 
-    def loss(carry, i):
-        key_i, total_loss_gen = carry
+    Args:
+    - key: PRNG key
+    - x: batch of data samples
+    - EBM_params: energy-based model parameters
+    - GEN_params: generator parameters
+    - EBM_fwd: energy-based model forward pass, --immutable
+    - GEN_fwd: generator forward pass, --immutable
+    - temp_schedule: temperature schedule
 
-        # Sample from the prior and posterior distributions
+    Returns:
+    - total_loss: the total GEN loss for the entire thermodynamic integration loop, log(p_β(x|z))
+    """
+
+    def loss(carry, t):
+
+        # Extract the key, temperature, and loss carried from the previous temperature
+        key_i, t_prev, loss_prev = carry
+
+        # Sample from the posterior distribution, tempered by the current temperature
         key_i, z_posterior = sample_posterior(
-            key_i, x, temp_schedule[i], EBM_params, GEN_params, EBM_fwd, GEN_fwd
+            key_i, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd
         )
 
-        # Compute the loss for both models
-        key_i, loss_current_gen = gen_loss(key_i, x, z_posterior, GEN_params, GEN_fwd)
+        # Compute the loss
+        key_i, current_loss = gen_loss(key_i, x, z_posterior, GEN_params, GEN_fwd)
 
         # ∇T = t_i - t_{i-1}
-        delta_T = temp_schedule[i] - temp_schedule[i - 1]
+        delta_T = t - t_prev
 
-        # # 1/2 * (f(x_i) + f(x_{i-1})) * ∇T
-        total_loss_gen += 0.5 * (loss_current_gen + total_loss_gen) * delta_T
+        # log[ p_β(x|z,t) ] = 1/2 * (f(x_i) + f(x_{i-1})) * ∇T
+        temperature_loss = 0.5 * (current_loss + loss_prev) * delta_T
 
-        return (key_i, total_loss_gen), None
+        return (key_i, t, current_loss), temperature_loss
 
-    total_loss_gen = 0
+    initial_state = (key, 0, 0)
 
-    initial_state = (key, total_loss_gen)
+    (_, _, _), temp_losses = scan(f=loss, init=initial_state, xs=temp_schedule)
 
-    (_, final_loss_gen), _ = scan(
-        loss, initial_state, jnp.arange(1, len(temp_schedule))
-    )
-
-    return final_loss_gen
+    return temp_losses.sum()

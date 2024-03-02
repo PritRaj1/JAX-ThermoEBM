@@ -73,19 +73,9 @@ def get_data(name):
             "train": datasets.CelebA(root="dataset/", split="train", download=True, transform=Resize_Normalise()),
             "test": datasets.CelebA(root="dataset/", split="test", download=True, transform=Resize_Normalise()),
         }
+    else:
         raise ValueError("Invalid dataset name.")
 
     return data["train"], data["test"], img_dim
 
 
-def get_grad_var(grad_ebm, grad_gen):
-
-    # Get gradients from grad dictionaries
-    grad_ebm = jax.tree_util.tree_flatten(grad_ebm)[0]
-    grad_gen = jax.tree_util.tree_flatten(grad_gen)[0]
-
-    # Flatten the gradients
-    grad_ebm = jnp.concatenate([jnp.ravel(g) for g in grad_ebm])
-    grad_gen = jnp.concatenate([jnp.ravel(g) for g in grad_gen])
-
-    return jnp.var(jnp.concatenate([grad_ebm, grad_gen]))

@@ -1,6 +1,7 @@
 import jax
 from jax import value_and_grad
 import jax.numpy as jnp
+import numpy as np
 import matplotlib.pyplot as plt
 import os
 import torch
@@ -10,16 +11,17 @@ from tensorboardX import SummaryWriter
 import tensorflow as tf
 
 from src.pipeline.initialise import *
-from src.pipeline.train_val import train_step, validate, generate
+from src.pipeline.scan_batch import train_epoch, val_epoch
+from src.pipeline.update_steps import generate
 from src.utils.helper_functions import get_data, NumpyLoader
 
 # from src.pipeline.metrics import profile_flops
 
 # tf.config.experimental.set_visible_devices([], "GPU")
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.9"
-# os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
-# os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"]="platform"
-# os.environ["XLA_FLAGS"] = "--xla_gpu_strict_conv_algorithm_picker=false --xla_gpu_force_compilation_parallelism=1"
+# os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.4"
+os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
+os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"]="platform"
+os.environ["XLA_FLAGS"] = "--xla_gpu_strict_conv_algorithm_picker=false --xla_gpu_force_compilation_parallelism=1"
 # os.environ["JAX_TRACEBACK_FILTERING"]="off"
 
 print(f"Device: {jax.default_backend()}")
@@ -58,6 +60,7 @@ optimiser_tup = (EBM_optimiser, GEN_optimiser)
 opt_state_tup = (EBM_opt_state, GEN_opt_state)
 
 log_path = f"logs/{data_set_name}/{temp_schedule[0]}"
+os.makedirs('images', exist_ok=True)
 
 # Output number of parameters of generator
 EBM_param_count = sum(x.size for x in jax.tree_util.tree_leaves(EBM_params))
@@ -68,23 +71,28 @@ print(f"Number of parameters in EBM: {EBM_param_count}")
 # Train the model
 tqdm_bar = tqdm.tqdm(range(num_epochs))
 for epoch in tqdm_bar:
-    train_loss = 0
-    train_grad_var = 0
-    val_loss = 0
-    val_grad_var = 0
-    for batch in test_loader:
-        x, _ = batch
-        key, params_tup, opt_state_tup, loss, grad_var = train_step(
-            key, x, params_tup, opt_state_tup, optimiser_tup, fwd_fcn_tup, temp_schedule
-        )
-        train_loss += loss
-        train_grad_var += grad_var
+    key, params_tup, opt_state_tup, train_loss, train_grad_var = train_epoch(
+        key,
+        test_loader,
+        params_tup,
+        opt_state_tup,
+        optimiser_tup,
+        fwd_fcn_tup,
+        temp_schedule,
+    )
 
-    for batch in val_loader:
-        x, _ = batch
-        key, loss, grad_var = validate(key, x, params_tup, fwd_fcn_tup, temp_schedule)
-        val_loss += loss
-        val_grad_var += grad_var
+    key, val_loss, val_grad_var = val_epoch(
+        key, val_loader, params_tup, fwd_fcn_tup, temp_schedule
+    )
+
+    key, image = generate(key, params_tup, fwd_fcn_tup)
+    image = np.array(image, dtype=np.float32) * 0.5 + 0.5
+
+    plt.figure()
+    plt.imshow(image, interpolation="nearest")
+    plt.axis("off")
+    plt.title(f"Epoch: {epoch}")
+    plt.savefig(f"images/epoch_{epoch}.png", dpi=750)
 
     tqdm_bar.set_postfix(
         {
@@ -102,11 +110,11 @@ for epoch in tqdm_bar:
 # Generate an image
 key, generated_image = generate(key, params_tup, fwd_fcn_tup)
 
-# Cast from [-1, 1] to [0, 1]
-generated_image = (generated_image + 1) / 2
+# Cast from [-1, 1] to [0, 255], uint8
+generated_image = (np.array(generated_image, dtype=np.float32) + 1) * 127.5
 
 # Plot the generated image
 plt.figure()
-plt.imshow(generated_image)
+plt.imshow(generated_image, interpolation="nearest")
 plt.axis("off")
-plt.savefig("generated_image.png")
+plt.savefig("generated_image.png", dpi=1000)
