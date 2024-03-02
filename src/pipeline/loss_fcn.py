@@ -1,6 +1,6 @@
 import jax
 import jax.numpy as jnp
-from jax.lax import fori_loop
+from jax.lax import scan
 from functools import partial
 import configparser
 
@@ -41,7 +41,6 @@ def gen_loss(key, x, z, GEN_params, GEN_fwd):
     return key, log_lkhood.squeeze()
 
 
-# @partial(jax.jit, static_argnums=(4,5,6))
 def ThermodynamicIntegrationLoss(
     key0, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedule
 ):
@@ -68,10 +67,8 @@ def ThermodynamicIntegrationLoss(
     # Prepend 0 to the temperature schedule, for unconditional ∇T calculation
     temp_schedule = jnp.concatenate([jnp.array([0]), temp_schedule])
 
-    def loss(i, losses_key_z):
-
-        # Parse the state
-        key_i, total_loss_ebm, total_loss_gen = losses_key_z
+    def loss(carry, i):
+        key_i, total_loss_ebm, total_loss_gen = carry
 
         # Sample from the prior and posterior distributions
         key_i, z_prior = sample_prior(key_i, EBM_params, EBM_fwd)
@@ -90,15 +87,15 @@ def ThermodynamicIntegrationLoss(
         total_loss_ebm += 0.5 * (loss_current_ebm + total_loss_ebm) * delta_T
         total_loss_gen += 0.5 * (loss_current_gen + total_loss_gen) * delta_T
 
-        return key_i, total_loss_ebm, total_loss_gen
+        return (key_i, total_loss_ebm, total_loss_gen), None
 
     total_loss_ebm = 0
     total_loss_gen = 0
 
     initial_state = (key0, total_loss_ebm, total_loss_gen)
 
-    _, total_loss_ebm, total_loss_gen = fori_loop(
-        1, len(temp_schedule), loss, initial_state
+    (final_key, final_loss_ebm, final_loss_gen), _ = scan(
+        loss, initial_state, jnp.arange(1, len(temp_schedule))
     )
 
-    return jnp.asarray([total_loss_ebm, total_loss_gen])
+    return jnp.asarray([final_loss_ebm, final_loss_gen])
