@@ -7,7 +7,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from src.pipeline.update_steps import *
-from src.MCMC_Samplers.sample_distributions import sample_prior
 
 parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")

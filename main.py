@@ -30,7 +30,7 @@ os.environ["XLA_FLAGS"] = "--xla_gpu_strict_conv_algorithm_picker=false --xla_gp
 # os.environ["JAX_DEBUG_NANS"]="True"
 # config.update("jax_debug_nans", True)
 # config.update("jax_enable_x64", True)
-
+os.environ["JAX_CHECK_TRACER_LEAKS"]="True"
 print(f"Device: {jax.default_backend()}")
 key = jax.random.PRNGKey(0)
 

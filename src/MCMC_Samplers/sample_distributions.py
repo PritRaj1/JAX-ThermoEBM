@@ -21,10 +21,10 @@ posterior_s = float(parser["MCMC"]["G_STEP_SIZE"])
 
 def update_step(key, x, grad_f, s):
     """Update the current state of the sampler."""
-    x += s * grad_f
+    x += s * s * grad_f
 
     key, subkey = jax.random.split(key)
-    x += jnp.sqrt(2 * s) * jax.random.normal(subkey, x.shape)
+    x += jnp.sqrt(2) * s * jax.random.normal(subkey, x.shape)
 
     return key, x
 
@@ -49,9 +49,11 @@ def sample_prior(key, EBM_params, EBM_fwd):
     - key: PRNG key
     - z: latent space variable sampled from p_a(x)
     """
-
     
     def MCMC_steps(carry, _):
+
+        jax.debug.breakpoint()
+
         key, z = carry
         grad_f = prior_grad_log(z, EBM_params, EBM_fwd)
         key, z = update_step(key, z, grad_f, prior_s)
@@ -96,6 +98,7 @@ def sample_posterior(
 
    
     def MCMC_steps(carry, _):
+        
         key, z = carry
         grad_f = posterior_grad_log(z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
         key, z = update_step(key, z, grad_f, posterior_s)

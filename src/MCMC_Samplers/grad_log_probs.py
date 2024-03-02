@@ -31,7 +31,6 @@ def prior_grad_log(z, EBM_params, EBM_fwd):
 
     # Find the gradient of the f_a(z) w.r.t. each z
     grad_f = jax.grad(EBM_fcn)(z)
-    
 
     return grad_f - (z / (p0_sig**2))
 

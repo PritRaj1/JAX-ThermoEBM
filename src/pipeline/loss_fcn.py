@@ -71,7 +71,7 @@ def ThermoEBM_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedu
     - total_loss: the total EBM loss for the entire thermodynamic integration loop, log(p_a(z))
     """
 
-    def loss(carry, t):
+    def loss(carry, t, EBM_params, EBM_fwd, GEN_params, GEN_fwd):
 
         # Extract the key, temperature, and loss carried from the previous temperature
         key_i, t_prev, loss_prev = carry
@@ -94,10 +94,11 @@ def ThermoEBM_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedu
         temperature_loss = 0.5 * (current_loss + loss_prev) * delta_T
 
         return (key_i, t, current_loss), temperature_loss
+    
+    scan_loss = partial(loss, EBM_params=EBM_params, EBM_fwd=EBM_fwd, GEN_params=GEN_params, GEN_fwd=GEN_fwd)
 
     initial_state = (key, 0, 0)
-
-    (_, _, _), temp_losses = scan(f=loss, init=initial_state, xs=temp_schedule)
+    (_, _, _), temp_losses = scan(f=scan_loss, init=initial_state, xs=temp_schedule)
 
     return temp_losses.mean()
 
@@ -126,7 +127,7 @@ def ThermoGEN_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedu
     - total_loss: the total GEN loss for the entire thermodynamic integration loop, log(p_β(x|z))
     """
 
-    def loss(carry, t):
+    def loss(carry, t, EBM_params, EBM_fwd, GEN_params, GEN_fwd):
 
         # Extract the key, temperature, and loss carried from the previous temperature
         key_i, t_prev, loss_prev = carry
@@ -146,9 +147,10 @@ def ThermoGEN_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedu
         temperature_loss = 0.5 * (current_loss + loss_prev) * delta_T
 
         return (key_i, t, current_loss), temperature_loss
+    
+    scan_loss = partial(loss, EBM_params=EBM_params, EBM_fwd=EBM_fwd, GEN_params=GEN_params, GEN_fwd=GEN_fwd)
 
     initial_state = (key, 0, 0)
-
-    (_, _, _), temp_losses = scan(f=loss, init=initial_state, xs=temp_schedule)
+    (_, _, _), temp_losses = scan(f=scan_loss, init=initial_state, xs=temp_schedule)
 
     return temp_losses.sum()
