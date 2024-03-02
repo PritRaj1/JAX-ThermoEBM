@@ -1,5 +1,3 @@
-
-
 import jax
 from jax import value_and_grad
 import jax.numpy as jnp
@@ -9,7 +7,7 @@ import optax
 from src.MCMC_Samplers.sample_distributions import sample_prior
 from src.pipeline.loss_fcn import ThermoEBM_loss, ThermoGEN_loss
 
-@partial(jax.jit, static_argnums=(3,))
+
 def get_losses_and_grads(key, x, params_tup, fwd_fcn_tup, temp_schedule):
     """
     Function to compute the losses and gradients of the models.
@@ -38,7 +36,7 @@ def get_losses_and_grads(key, x, params_tup, fwd_fcn_tup, temp_schedule):
 
     return loss_ebm, grad_ebm, loss_gen, grad_gen
 
-@partial(jax.jit, static_argnums=((0,)))
+
 def update_params(optimiser_tup, batch_grad_list, opt_state_tup, params_tup):
     """
     Function to update the parameters of the models.
@@ -67,14 +65,14 @@ def update_params(optimiser_tup, batch_grad_list, opt_state_tup, params_tup):
 
     return tuple(new_params_set), tuple(new_opt_states)
 
-@partial(jax.jit, static_argnums=(2,))
+
 def generate(key, params_tup, fwd_fcn_tup):
     key, z = sample_prior(key, params_tup[0], fwd_fcn_tup[0])
     x_pred = fwd_fcn_tup[1](params_tup[1], jax.lax.stop_gradient(z))
 
     return key, x_pred[0]
 
-@jax.jit
+
 def get_grad_var(batch_grad_ebm, batch_grad_gen):
 
     # Take mean across batch

@@ -27,7 +27,7 @@ def init_EBM(key):
 
     EBM_params = EBM_model.init(key, z_init)
 
-    GEN_fwd = jax.jit(EBM_model.apply)
+    GEN_fwd = EBM_model.apply
 
     return key, EBM_params, GEN_fwd
 
@@ -38,7 +38,7 @@ def init_GEN(key, image_dim):
     GEN_model = GEN(image_dim)
     GEN_params = GEN_model.init(key, z_init)
 
-    GEN_fwd = jax.jit(GEN_model.apply)
+    GEN_fwd = GEN_model.apply
 
     return key, GEN_params, GEN_fwd
 

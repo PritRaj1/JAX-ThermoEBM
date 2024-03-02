@@ -16,7 +16,7 @@ batch_size = int(parser["PIPELINE"]["BATCH_SIZE"])
 
 batch_loss_grad = jax.vmap(get_losses_and_grads, in_axes=(0, 0, None, None, None))
 
-@partial(jax.jit, static_argnums=(4, 5))
+
 def train_step(
     key, x, params_tup, opt_state_tup, optimiser_tup, fwd_fcn_tup, temp_schedule
 ):
@@ -47,7 +47,7 @@ def train_step(
     return key, params_tup, opt_state_tup, total_loss, grad_var
 
 
-@partial(jax.jit, static_argnums=(3,))
+
 def validate(key, x, params_tup, fwd_fcn_tup, temp_schedule):
 
     # Get a batch of keys
