@@ -8,7 +8,7 @@ import configparser
 import tqdm
 
 from src.pipeline.initialise import *
-from src.pipeline.scan_batch import train_epoch, val_epoch
+from src.pipeline.batch_steps import train_step, val_step
 from src.pipeline.update_steps import generate
 from src.utils.helper_functions import get_data, NumpyLoader
 
@@ -18,7 +18,9 @@ from src.utils.helper_functions import get_data, NumpyLoader
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.98"
 # os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 # os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"]="platform"
-os.environ["XLA_FLAGS"] = "--xla_gpu_strict_conv_algorithm_picker=false --xla_gpu_force_compilation_parallelism=1"
+os.environ["XLA_FLAGS"] = (
+    "--xla_gpu_strict_conv_algorithm_picker=false --xla_gpu_force_compilation_parallelism=1"
+)
 # os.environ['XLA_FLAGS'] = (
 #     '--xla_gpu_enable_triton_softmax_fusion=true '
 #     '--xla_gpu_triton_gemm_any=True '
@@ -28,9 +30,10 @@ os.environ["XLA_FLAGS"] = "--xla_gpu_strict_conv_algorithm_picker=false --xla_gp
 # )
 # os.environ["JAX_TRACEBACK_FILTERING"]="off"
 # os.environ["JAX_DEBUG_NANS"]="True"
-# config.update("jax_debug_nans", True)
+config.update("jax_debug_nans", True)
+config.update('jax_disable_jit', True)
 # config.update("jax_enable_x64", True)
-os.environ["JAX_CHECK_TRACER_LEAKS"]="True"
+# os.environ["JAX_CHECK_TRACER_LEAKS"] = "True"
 print(f"Device: {jax.default_backend()}")
 key = jax.random.PRNGKey(0)
 
@@ -67,7 +70,7 @@ optimiser_tup = (EBM_optimiser, GEN_optimiser)
 opt_state_tup = (EBM_opt_state, GEN_opt_state)
 
 log_path = f"logs/{data_set_name}/{temp_schedule[0]}"
-os.makedirs('images', exist_ok=True)
+os.makedirs("images", exist_ok=True)
 os.makedirs("logs", exist_ok=True)
 
 # Output number of parameters of generator
@@ -76,24 +79,35 @@ GEN_param_count = sum(x.size for x in jax.tree_util.tree_leaves(GEN_params))
 print(f"Number of parameters in generator: {GEN_param_count}")
 print(f"Number of parameters in EBM: {EBM_param_count}")
 
+jit_train_step = jax.jit(train_step, static_argnums=(4, 5))
+jit_val_step = jax.jit(val_step, static_argnums=3)
+
 # Train the model
 tqdm_bar = tqdm.tqdm(range(num_epochs))
 for epoch in tqdm_bar:
-    key, params_tup, opt_state_tup, train_loss, train_grad_var = train_epoch(
-        key,
-        test_loader,
-        params_tup,
-        opt_state_tup,
-        optimiser_tup,
-        fwd_fcn_tup,
-        temp_schedule,
-    )
-    train_grad_var.block_until_ready()
 
+    epoch_loss = 0
+    epoch_grad_var = 0
 
-    key, val_loss, val_grad_var = val_epoch(
-        key, val_loader, params_tup, fwd_fcn_tup, temp_schedule
-    )
+    for x, _ in test_loader: # tqdm.tqdm(test_loader):
+
+        key, params_tup, opt_state_tup, batch_loss, batch_var = jit_train_step(
+            key, x, params_tup, opt_state_tup, optimiser_tup, fwd_fcn_tup, temp_schedule
+        )
+
+        epoch_loss += batch_loss
+        epoch_grad_var += batch_var
+
+    val_loss = 0
+    val_grad_var = 0
+
+    for x, _ in val_loader:
+        key, batch_loss, batch_var = jit_val_step(
+            key, x, params_tup, fwd_fcn_tup, temp_schedule
+        )
+
+        val_loss += batch_loss
+        val_grad_var += batch_var
 
     key, image = generate(key, params_tup, fwd_fcn_tup)
     image = np.array(image, dtype=np.float32) * 0.5 + 0.5
@@ -106,10 +120,10 @@ for epoch in tqdm_bar:
 
     tqdm_bar.set_postfix(
         {
-            "Train Loss": train_loss,
-            "Val Loss": val_loss,
-            "Train Grad Var": train_grad_var,
-            "Val Grad Var": val_grad_var
+            "Train Loss": epoch_loss / len(test_loader),
+            "Val Loss": val_loss / len(val_loader),
+            "Train Grad Var": epoch_grad_var / len(test_loader),
+            "Val Grad Var": val_grad_var / len(val_loader),
         }
     )
 

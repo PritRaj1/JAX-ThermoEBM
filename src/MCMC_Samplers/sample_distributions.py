@@ -49,31 +49,23 @@ def sample_prior(key, EBM_params, EBM_fwd):
     - key: PRNG key
     - z: latent space variable sampled from p_a(x)
     """
-    
-    def MCMC_steps(carry, _):
 
-        jax.debug.breakpoint()
+    def MCMC_steps(carry, _, EBM_params, EBM_fwd):
 
         key, z = carry
         grad_f = prior_grad_log(z, EBM_params, EBM_fwd)
         key, z = update_step(key, z, grad_f, prior_s)
         return (key, z), None
 
+    scan_MCMC = partial(MCMC_steps, EBM_params=EBM_params, EBM_fwd=EBM_fwd)
+
     key0, z0 = sample_p0(key)
-    (final_key, final_z), _ = scan(MCMC_steps, (key0, z0), None, length=prior_steps)
+    (final_key, final_z), _ = scan(scan_MCMC, (key0, z0), None, length=prior_steps)
 
     return final_key, final_z
 
 
-def sample_posterior(
-    key,
-    x,
-    t,
-    EBM_params,
-    GEN_params,
-    EBM_fwd,
-    GEN_fwd
-):
+def sample_posterior(key, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     """
     Sample from the posterior distribution.
 
@@ -96,16 +88,24 @@ def sample_posterior(
     - z_samples: samples from the posterior distribution indexed by temperature
     """
 
-   
-    def MCMC_steps(carry, _):
-        
+    def MCMC_steps(carry, _, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
+
         key, z = carry
         grad_f = posterior_grad_log(z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
         key, z = update_step(key, z, grad_f, posterior_s)
         return (key, z), None
 
-    key0, z0 = sample_p0(key)
+    scan_MCMC = partial(
+        MCMC_steps,
+        x=x,
+        t=t,
+        EBM_params=EBM_params,
+        GEN_params=GEN_params,
+        EBM_fwd=EBM_fwd,
+        GEN_fwd=GEN_fwd,
+    )
 
-    (final_key, final_z), _ = scan(MCMC_steps, (key0, z0), None, length=posterior_steps)
-    
+    key0, z0 = sample_p0(key)
+    (final_key, final_z), _ = scan(scan_MCMC, (key0, z0), None, length=posterior_steps)
+
     return final_key, final_z

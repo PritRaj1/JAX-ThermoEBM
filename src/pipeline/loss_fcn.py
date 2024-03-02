@@ -71,36 +71,49 @@ def ThermoEBM_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedu
     - total_loss: the total EBM loss for the entire thermodynamic integration loop, log(p_a(z))
     """
 
-    def loss(carry, t, EBM_params, EBM_fwd, GEN_params, GEN_fwd):
 
-        # Extract the key, temperature, and loss carried from the previous temperature
-        key_i, t_prev, loss_prev = carry
+    # Prepend 0 to the temperature schedule, for unconditional ∇T calculation
+    temp_schedule = jnp.concatenate([jnp.array([0]), temp_schedule])
 
-        # Sample from the prior distribution
-        key_i, z_prior = sample_prior(key_i, EBM_params, EBM_fwd)
+    def loss(carry, i, EBM_params, EBM_fwd, GEN_params, GEN_fwd, temp_schedule):
+        key_i, prev_loss, total_loss_ebm = carry
+
+        # Sample from the prior distribution, do not replace the key
+        _, z_prior = sample_prior(key_i, EBM_params, EBM_fwd)
 
         # Sample from the posterior distribution tempered by the current temperature
         key_i, z_posterior = sample_posterior(
-            key_i, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd
+            key_i, x, temp_schedule[i], EBM_params, GEN_params, EBM_fwd, GEN_fwd
         )
 
-        # Compute the current loss
+        # Compute the loss at the current temperature
         current_loss = ebm_loss(z_prior, z_posterior, EBM_params, EBM_fwd)
 
         # ∇T = t_i - t_{i-1}
-        delta_T = t - t_prev
+        delta_T = temp_schedule[i] - temp_schedule[i - 1]
 
-        # Accumulate 1/2 * (f(x_i) + f(x_{i-1})) * ∇T
-        temperature_loss = 0.5 * (current_loss + loss_prev) * delta_T
+        # 1/2 * (f(x_i) + f(x_{i-1})) * ∇T
+        total_loss_ebm += 0.5 * (current_loss + prev_loss) * delta_T
 
-        return (key_i, t, current_loss), temperature_loss
-    
-    scan_loss = partial(loss, EBM_params=EBM_params, EBM_fwd=EBM_fwd, GEN_params=GEN_params, GEN_fwd=GEN_fwd)
+        return (key_i, current_loss, total_loss_ebm), None
+
+    scan_loss = partial(
+        loss,
+        EBM_params=EBM_params,
+        EBM_fwd=EBM_fwd,
+        GEN_params=GEN_params,
+        GEN_fwd=GEN_fwd,
+        temp_schedule=temp_schedule,
+    )
 
     initial_state = (key, 0, 0)
-    (_, _, _), temp_losses = scan(f=scan_loss, init=initial_state, xs=temp_schedule)
 
-    return temp_losses.mean()
+    (_, _, final_loss_ebm), _ = scan(
+        scan_loss, initial_state, jnp.arange(1, len(temp_schedule))
+    )
+
+    return final_loss_ebm
+
 
 
 def ThermoGEN_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedule):
@@ -127,30 +140,42 @@ def ThermoGEN_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedu
     - total_loss: the total GEN loss for the entire thermodynamic integration loop, log(p_β(x|z))
     """
 
-    def loss(carry, t, EBM_params, EBM_fwd, GEN_params, GEN_fwd):
+    # Prepend 0 to the temperature schedule, for unconditional ∇T calculation
+    temp_schedule = jnp.concatenate([jnp.array([0]), temp_schedule])
 
-        # Extract the key, temperature, and loss carried from the previous temperature
-        key_i, t_prev, loss_prev = carry
+    def loss(carry, i, EBM_params, EBM_fwd, GEN_params, GEN_fwd, temp_schedule):
+        key_i, prev_loss, total_loss_gen = carry
 
-        # Sample from the posterior distribution, tempered by the current temperature
+        # Sample from the posterior distribution tempered by the current temperature
         key_i, z_posterior = sample_posterior(
-            key_i, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd
+            key_i, x, temp_schedule[i], EBM_params, GEN_params, EBM_fwd, GEN_fwd
         )
 
-        # Compute the loss
+        # Compute the loss for both models
         key_i, current_loss = gen_loss(key_i, x, z_posterior, GEN_params, GEN_fwd)
 
         # ∇T = t_i - t_{i-1}
-        delta_T = t - t_prev
+        delta_T = temp_schedule[i] - temp_schedule[i - 1]
 
-        # log[ p_β(x|z,t) ] = 1/2 * (f(x_i) + f(x_{i-1})) * ∇T
-        temperature_loss = 0.5 * (current_loss + loss_prev) * delta_T
+        # # 1/2 * (f(x_i) + f(x_{i-1})) * ∇T
+        total_loss_gen += 0.5 * (current_loss + prev_loss) * delta_T
 
-        return (key_i, t, current_loss), temperature_loss
-    
-    scan_loss = partial(loss, EBM_params=EBM_params, EBM_fwd=EBM_fwd, GEN_params=GEN_params, GEN_fwd=GEN_fwd)
+        return (key_i, current_loss, total_loss_gen), None
+
+    scan_loss = partial(
+        loss,
+        EBM_params=EBM_params,
+        EBM_fwd=EBM_fwd,
+        GEN_params=GEN_params,
+        GEN_fwd=GEN_fwd,
+        temp_schedule=temp_schedule,
+    )
 
     initial_state = (key, 0, 0)
-    (_, _, _), temp_losses = scan(f=scan_loss, init=initial_state, xs=temp_schedule)
 
-    return temp_losses.sum()
+    (_, _, final_loss_gen), _ = scan(
+        scan_loss, initial_state, jnp.arange(1, len(temp_schedule))
+    )
+
+    return final_loss_gen
+

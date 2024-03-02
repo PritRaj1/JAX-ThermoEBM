@@ -12,14 +12,13 @@ parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")
 
 batch_size = int(parser["PIPELINE"]["BATCH_SIZE"])
-
 batch_loss_grad = jax.vmap(get_losses_and_grads, in_axes=(0, 0, None, None, None))
 
 
 def train_step(
     key, x, params_tup, opt_state_tup, optimiser_tup, fwd_fcn_tup, temp_schedule
 ):
-    
+
     # Get a batch of keys
     key_batch = jax.random.split(key, batch_size + 1)
     key, sub_key_batch = key_batch[0], key_batch[1:]
@@ -48,8 +47,7 @@ def train_step(
     return key, params_tup, opt_state_tup, total_loss, grad_var
 
 
-
-def validate(key, x, params_tup, fwd_fcn_tup, temp_schedule):
+def val_step(key, x, params_tup, fwd_fcn_tup, temp_schedule):
 
     # Get a batch of keys
     key_batch = jax.random.split(key, batch_size + 1)

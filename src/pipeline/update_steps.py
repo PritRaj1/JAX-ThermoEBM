@@ -10,23 +10,28 @@ from src.pipeline.loss_fcn import ThermoEBM_loss, ThermoGEN_loss
 
 def get_losses_and_grads(key, x, params_tup, fwd_fcn_tup, temp_schedule):
     """
-    Function to compute the losses and gradients of the models.
+        Function to compute the losses and gradients of the models.
 
-    Args:
-    - key: PRNG key
-    - x: one item from the dataset
-    - params_tup: tuple of model parameters
-    - fwd_fcn_tup: tuple of model forward passes
-    - temp_schedule: temperature schedule
+        Args:
+        - key: PRNG key
+        - x: one item from the dataset
+        - params_tup: tuple of model parameters
+        - fwd_fcn_tup: tuple of model forward passes
+        - temp_schedule: temperature schedule
 
-    Returns:
-    - loss_ebm: EBM loss
-    - grad_ebm: EBM gradients
-    - loss_gen: GEN loss
-    - grad_gen: GEN gradients
+        Returns:
+        - loss_ebm: EBM loss
+        - grad_ebm: EBM gradients
+        - loss_gen: GEN loss
+        - grad_gen: GEN gradients
+
+    *Note: The same key is utilized to maintain consistency 
+    in z_posterior across the two Thermodynamic Integration loops. 
+    These loops are separated to circumvent the necessity of computing 
+    a Jacobian when dealing with two output losses simultaneously.
     """
 
-    # Compute loss of both models
+    # Compute loss of both models, use the same key to ensure z_posterior is the same
     loss_ebm, grad_ebm = value_and_grad(ThermoEBM_loss, argnums=2)(
         key, x, *params_tup, *fwd_fcn_tup, temp_schedule
     )
@@ -55,7 +60,7 @@ def update_params(optimiser_tup, grad_list, opt_state_tup, params_tup):
     ebm_updates, new_ebm_opt_state = optimiser_tup[0].update(
         grad_list[0], opt_state_tup[0]
     )
-    
+
     gen_updates, new_gen_opt_state = optimiser_tup[1].update(
         grad_list[1], opt_state_tup[1]
     )
