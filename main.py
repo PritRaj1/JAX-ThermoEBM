@@ -102,6 +102,9 @@ for epoch in tqdm_bar:
 # Generate an image
 key, generated_image = generate(key, params_tup, fwd_fcn_tup)
 
+# Cast from [-1, 1] to [0, 1]
+generated_image = (generated_image + 1) / 2
+
 # Plot the generated image
 plt.figure()
 plt.imshow(generated_image)

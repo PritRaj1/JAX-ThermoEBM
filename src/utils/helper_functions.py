@@ -53,10 +53,8 @@ def get_data(name):
             # Cast to [0, 1]
             pic = np.array(pic, dtype=jnp.float32) / 255
 
-            # Normalise
-            mean = jnp.mean(pic)
-            std = jnp.std(pic)
-            pic = (pic - mean) / std
+            # Normalise to [-1, 1]
+            pic = (pic - 0.5) / 0.5
 
             return pic        
 
