@@ -112,7 +112,7 @@ def ThermoEBM_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedu
         scan_loss, initial_state, jnp.arange(1, len(temp_schedule))
     )
 
-    return final_loss_ebm
+    return - final_loss_ebm
 
 
 
@@ -177,5 +177,5 @@ def ThermoGEN_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd, temp_schedu
         scan_loss, initial_state, jnp.arange(1, len(temp_schedule))
     )
 
-    return final_loss_gen
+    return - final_loss_gen
 

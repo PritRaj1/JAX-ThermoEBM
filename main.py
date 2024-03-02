@@ -18,9 +18,7 @@ from src.utils.helper_functions import get_data, NumpyLoader
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.98"
 # os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 # os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"]="platform"
-os.environ["XLA_FLAGS"] = (
-    "--xla_gpu_strict_conv_algorithm_picker=false --xla_gpu_force_compilation_parallelism=1"
-)
+# os.environ["XLA_FLAGS"] = ("--xla_gpu_strict_conv_algorithm_picker=false --xla_gpu_force_compilation_parallelism=1")
 # os.environ['XLA_FLAGS'] = (
 #     '--xla_gpu_enable_triton_softmax_fusion=true '
 #     '--xla_gpu_triton_gemm_any=True '
@@ -30,8 +28,8 @@ os.environ["XLA_FLAGS"] = (
 # )
 # os.environ["JAX_TRACEBACK_FILTERING"]="off"
 # os.environ["JAX_DEBUG_NANS"]="True"
-config.update("jax_debug_nans", True)
-config.update('jax_disable_jit', True)
+# config.update("jax_debug_nans", True)
+# config.update('jax_disable_jit', True)
 # config.update("jax_enable_x64", True)
 # os.environ["JAX_CHECK_TRACER_LEAKS"] = "True"
 print(f"Device: {jax.default_backend()}")
@@ -89,7 +87,8 @@ for epoch in tqdm_bar:
     epoch_loss = 0
     epoch_grad_var = 0
 
-    for x, _ in test_loader: # tqdm.tqdm(test_loader):
+    batch_bar = tqdm.tqdm(test_loader, leave=False)
+    for x, _ in batch_bar: # tqdm.tqdm(test_loader):
 
         key, params_tup, opt_state_tup, batch_loss, batch_var = jit_train_step(
             key, x, params_tup, opt_state_tup, optimiser_tup, fwd_fcn_tup, temp_schedule
@@ -98,16 +97,31 @@ for epoch in tqdm_bar:
         epoch_loss += batch_loss
         epoch_grad_var += batch_var
 
+        batch_bar.set_postfix(
+            {
+                "Train Loss": batch_loss,
+                "Train Grad Var": batch_var,
+            }
+        )
+
     val_loss = 0
     val_grad_var = 0
 
-    for x, _ in val_loader:
+    batch_bar = tqdm.tqdm(val_loader, leave=False)
+    for x, _ in batch_bar:
         key, batch_loss, batch_var = jit_val_step(
             key, x, params_tup, fwd_fcn_tup, temp_schedule
         )
 
         val_loss += batch_loss
         val_grad_var += batch_var
+
+        batch_bar.set_postfix(
+            {
+                "Val Loss": batch_loss,
+                "Val Grad Var": batch_var,
+            }
+        )
 
     key, image = generate(key, params_tup, fwd_fcn_tup)
     image = np.array(image, dtype=np.float32) * 0.5 + 0.5
@@ -122,8 +136,6 @@ for epoch in tqdm_bar:
         {
             "Train Loss": epoch_loss / len(test_loader),
             "Val Loss": val_loss / len(val_loader),
-            "Train Grad Var": epoch_grad_var / len(test_loader),
-            "Val Grad Var": val_grad_var / len(val_loader),
         }
     )
 
