@@ -33,7 +33,7 @@ def sample_p0(key):
     """Sample from the prior distribution."""
 
     key, subkey = jax.random.split(key)
-    return key, p0_sig * jax.random.normal(subkey, (1, 1, z_channels))
+    return key, p0_sig * jax.random.normal(subkey, (batch_size, 1, 1, z_channels))
 
 
 def sample_prior(key, EBM_params, EBM_fwd):
@@ -50,6 +50,7 @@ def sample_prior(key, EBM_params, EBM_fwd):
     - z: latent space variable sampled from p_a(x)
     """
 
+    
     def MCMC_steps(carry, _):
         key, z = carry
         grad_f = prior_grad_log(z, EBM_params, EBM_fwd)
@@ -93,6 +94,7 @@ def sample_posterior(
     - z_samples: samples from the posterior distribution indexed by temperature
     """
 
+   
     def MCMC_steps(carry, _):
         key, z = carry
         grad_f = posterior_grad_log(z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd)

@@ -2,7 +2,7 @@
 torch
 torchvision
 torchmetrics
-jax[cuda12_pip]
+jax[cuda11_pip]
 flax[all]
 optax
 matplotlib

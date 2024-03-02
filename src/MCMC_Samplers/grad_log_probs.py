@@ -6,8 +6,9 @@ import configparser
 parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")
 
-p0_sig = float(parser['SIGMAS']['p0_SIGMA'])
-pl_sig = float(parser['SIGMAS']['LKHOOD_SIGMA'])
+p0_sig = float(parser["SIGMAS"]["p0_SIGMA"])
+pl_sig = float(parser["SIGMAS"]["LKHOOD_SIGMA"])
+
 
 def prior_grad_log(z, EBM_params, EBM_fwd):
     """
@@ -26,7 +27,7 @@ def prior_grad_log(z, EBM_params, EBM_fwd):
 
         f_z = EBM_fwd(EBM_params, z)
 
-        return f_z.sum(axis=-1).squeeze()
+        return f_z.sum()
 
     # Find the gradient of the f_a(z) w.r.t. each z
     grad_f = jax.grad(EBM_fcn)(z)
@@ -34,9 +35,7 @@ def prior_grad_log(z, EBM_params, EBM_fwd):
     return grad_f - (z / (p0_sig**2))
 
 
-def posterior_grad_log(
-    z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd
-):
+def posterior_grad_log(z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     """
     Function to compute the gradient of the log posterior: log[ p(x | z)^t * p(z) ] w.r.t. z.
 
@@ -56,13 +55,13 @@ def posterior_grad_log(
     def log_llood_fcn(z, x):
         g_z = GEN_fwd(GEN_params, z)
 
-        MSE = jnp.linalg.norm(x - g_z, axis=(1,2))
+        MSE = jnp.linalg.norm(x - g_z, axis=(1, 2))
         MSE = jnp.mean(MSE, axis=-1)
         log_lkhood = -t * (MSE**2) / (2 * pl_sig**2)
 
-        return log_lkhood.squeeze()
-    
-    # Find the gradient of the log likelihood w.r.t. each z 
+        return log_lkhood.sum()
+
+    # Find the gradient of the log likelihood w.r.t. each z
     grad_log_llood = jax.grad(log_llood_fcn, argnums=0)(z, x)
 
     grad_prior = prior_grad_log(z, EBM_params, EBM_fwd)
