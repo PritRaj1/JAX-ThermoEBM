@@ -9,8 +9,8 @@ import tqdm
 
 from src.pipeline.initialise import *
 from src.pipeline.batch_steps import train_step, val_step
-from src.pipeline.update_steps import generate
-from src.utils.helper_functions import get_data, NumpyLoader
+from src.pipeline.generate import generate
+from src.utils.helper_functions import get_data, make_grid, NumpyLoader
 
 # from src.pipeline.metrics import profile_flops
 
@@ -124,19 +124,21 @@ for epoch in tqdm_bar:
         )
 
     # Generate an image
-    key, image = generate(key, params_tup, fwd_fcn_tup)
+    key, image = generate(key, params_tup, 4, fwd_fcn_tup)
 
-    # Plot the generated image and real image
+    fake_grid = make_grid(image, n_row=2)
+    real_grid = make_grid(x[:4], n_row=2)
+
     fig, ax = plt.subplots(1, 2)
-    ax[0].imshow(image.astype(np.float32), vmin=-1, vmax=1)
+    ax[0].imshow(fake_grid)
     ax[0].set_title("Generated Image")
     ax[0].axis("off")
-    ax[1].imshow(x[0].astype(np.float32), vmin=-1, vmax=1)
+    ax[1].imshow(real_grid)
     ax[1].set_title("Real Image")
     ax[1].axis("off")
     plt.suptitle(f"Epoch: {epoch}")
     plt.tight_layout()
-    plt.savefig(f"images/{epoch}.png", dpi=1000)
+    plt.savefig(f"images/{epoch}.png", dpi=500)
 
     tqdm_bar.set_postfix(
         {

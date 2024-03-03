@@ -56,22 +56,49 @@ def get_data(name):
             # Normalise to [-1, 1]
             pic = (pic - 0.5) / 0.5
 
-            return pic        
+            return pic
 
     if name == "CIFAR10":
         data = {
-            "train": datasets.CIFAR10(root="dataset/", train=True, download=True, transform=Resize_Normalise()),
-            "test": datasets.CIFAR10(root="dataset/", train=False, download=True, transform=Resize_Normalise()),
+            "train": datasets.CIFAR10(
+                root="dataset/", train=True, download=True, transform=Resize_Normalise()
+            ),
+            "test": datasets.CIFAR10(
+                root="dataset/",
+                train=False,
+                download=True,
+                transform=Resize_Normalise(),
+            ),
         }
     elif name == "SVHN":
         data = {
-            "train": datasets.SVHN(root="dataset/", split="train", download=True, transform=Resize_Normalise()),
-            "test": datasets.SVHN(root="dataset/", split="test", download=True, transform=Resize_Normalise()),
+            "train": datasets.SVHN(
+                root="dataset/",
+                split="train",
+                download=True,
+                transform=Resize_Normalise(),
+            ),
+            "test": datasets.SVHN(
+                root="dataset/",
+                split="test",
+                download=True,
+                transform=Resize_Normalise(),
+            ),
         }
     elif name == "CelebA":
         data = {
-            "train": datasets.CelebA(root="dataset/", split="train", download=True, transform=Resize_Normalise()),
-            "test": datasets.CelebA(root="dataset/", split="test", download=True, transform=Resize_Normalise()),
+            "train": datasets.CelebA(
+                root="dataset/",
+                split="train",
+                download=True,
+                transform=Resize_Normalise(),
+            ),
+            "test": datasets.CelebA(
+                root="dataset/",
+                split="test",
+                download=True,
+                transform=Resize_Normalise(),
+            ),
         }
     else:
         raise ValueError("Invalid dataset name.")
@@ -79,3 +106,27 @@ def get_data(name):
     return data["train"], data["test"], img_dim
 
 
+def make_grid(images, n_row=4, padding=2, pad_value=0):
+    """Make a grid of images."""
+    n_images = images.shape[0]
+    n_col = int(np.ceil(n_images / n_row))
+    grid = np.full(
+        (
+            images.shape[1] * n_row + padding * (n_row - 1),
+            images.shape[2] * n_col + padding * (n_col - 1),
+            images.shape[3],
+        ),
+        pad_value,
+        dtype=images.dtype,
+    )
+    for i in range(n_images):
+        row = i // n_col
+        col = i % n_col
+        grid[
+            row * (images.shape[1] + padding) : row * (images.shape[1] + padding)
+            + images.shape[1],
+            col * (images.shape[2] + padding) : col * (images.shape[2] + padding)
+            + images.shape[2],
+        ] = images[i]
+        
+    return grid
