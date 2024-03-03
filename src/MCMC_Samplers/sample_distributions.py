@@ -44,7 +44,7 @@ def sample_prior(key, EBM_params, EBM_fwd):
     """
 
     scan_MCMC = partial(langevin_prior, EBM_params=EBM_params, EBM_fwd=EBM_fwd)
-
+    
     # Sample from the original latent space
     key, z0 = sample_p0(key)
 

@@ -109,7 +109,7 @@ for epoch in tqdm_bar:
 
     batch_bar = tqdm.tqdm(val_loader, leave=False)
     for x, _ in batch_bar:
-        key, batch_loss, batch_var = jit_val_step(
+        key, batch_loss, batch_var, fid_score, mifid_score, kid_score, lpips_score = jit_val_step(
             key, x, params_tup, fwd_fcn_tup, temp_schedule
         )
 
@@ -140,12 +140,18 @@ for epoch in tqdm_bar:
     plt.tight_layout()
     plt.savefig(f"images/{epoch}.png", dpi=500)
 
-    tqdm_bar.set_postfix(
-        {
-            "Train Loss": epoch_loss / len(test_loader),
-            "Val Loss": val_loss / len(val_loader),
-        }
-    )
+    print(f"Epoch: {epoch}, Train Loss: {epoch_loss / len(test_loader)}, Val Loss: {val_loss / len(val_loader)}, FID: {fid_score}, MI-FID: {mifid_score}, KID: {kid_score}, LPIPS: {lpips_score}")
+
+    # tqdm_bar.set_postfix(
+    #     {
+    #         "Train Loss": epoch_loss / len(test_loader),
+    #         "Val Loss": val_loss / len(val_loader),
+    #         "FID": fid_score,
+    #         "MI-FID": mifid_score,
+    #         "KID": kid_score,
+    #         "LPIPS": lpips_score,
+    #     }
+    # )
 
     # # Profile flops in final epoch
     # if epoch == num_epochs - 1:
