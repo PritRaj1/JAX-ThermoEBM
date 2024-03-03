@@ -4,7 +4,8 @@ from sklearn.metrics import pairwise_kernels
 
 def kernel_matrix(x, y, gamma):
     """Compute the kernel matrix."""
-    return pairwise_kernels(x, y, metric='rbf', gamma=gamma)
+    return pairwise_kernels(x, y, metric="rbf", gamma=gamma)
+
 
 def calculate_kid(x, y):
     """Calculate the kernel inception distance."""

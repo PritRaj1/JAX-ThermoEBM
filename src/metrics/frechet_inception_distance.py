@@ -16,8 +16,10 @@ def calculate_fid(real_features, fake_features):
     var_fake = jnp.cov(fake_features, fake_features, rowvar=True)
 
     diff = mu_real - mu_fake
-    
-    return  jnp.dot(diff, diff) + jnp.trace(var_real + var_fake - 2 * jnp.sqrt(var_real @ var_fake))
+
+    return jnp.dot(diff, diff) + jnp.trace(
+        var_real + var_fake - 2 * jnp.sqrt(var_real @ var_fake)
+    )
 
 
 def cosine_similarity(real_features, fake_features):

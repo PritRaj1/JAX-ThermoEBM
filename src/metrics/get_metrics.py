@@ -5,6 +5,7 @@ from src.metrics.frechet_inception_distance import calculate_fid, calculate_mifi
 from src.metrics.kernel_inception_distance import calculate_kid
 from src.metrics.inception_network import extract_features
 
+
 def profile_image(x, x_pred):
 
     # Get the inception features

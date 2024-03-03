@@ -2,6 +2,7 @@ import jax
 from jax import config
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import rc
 import os
 import torch
 import configparser
@@ -12,6 +13,10 @@ from src.pipeline.batch_steps import train_step, val_step
 from src.pipeline.generate import generate
 from src.metrics.get_metrics import profile_image
 from src.utils.helper_functions import get_data, make_grid, NumpyLoader
+
+# Set plot styling
+rc("font", **{"family": "serif", "serif": ["Computer Modern"]}, size=14)
+rc("text", usetex=True)
 
 # from src.pipeline.metrics import profile_flops
 
@@ -89,7 +94,7 @@ for epoch in tqdm_bar:
     epoch_grad_var = 0
 
     batch_bar = tqdm.tqdm(test_loader, leave=False)
-    for x, _ in batch_bar: # tqdm.tqdm(test_loader):
+    for x, _ in batch_bar:  # tqdm.tqdm(test_loader):
 
         key, params_tup, opt_state_tup, batch_loss, batch_var = jit_train_step(
             key, x, params_tup, opt_state_tup, optimiser_tup, fwd_fcn_tup, temp_schedule
@@ -131,9 +136,7 @@ for epoch in tqdm_bar:
             }
         )
 
-    # 
-
-    fake_grid = make_grid(image, n_row=2)
+    fake_grid = make_grid(fake_images[:4], n_row=2)
     real_grid = make_grid(x[:4], n_row=2)
 
     fig, ax = plt.subplots(1, 2)
@@ -143,23 +146,6 @@ for epoch in tqdm_bar:
     ax[1].imshow(real_grid)
     ax[1].set_title("Real Image")
     ax[1].axis("off")
-    plt.suptitle(f"Epoch: {epoch}")
+    plt.suptitle(f"Epoch: {epoch}\n FID: {fid}, MI-FID: {mifid}, KID: {kid}")
     plt.tight_layout()
     plt.savefig(f"images/{epoch}.png", dpi=500)
-
-    print(f"Epoch: {epoch}, Train Loss: {epoch_loss / len(test_loader)}, Val Loss: {val_loss / len(val_loader)}, FID: {fid_score}, MI-FID: {mifid_score}, KID: {kid_score}, LPIPS: {lpips_score}")
-
-    # tqdm_bar.set_postfix(
-    #     {
-    #         "Train Loss": epoch_loss / len(test_loader),
-    #         "Val Loss": val_loss / len(val_loader),
-    #         "FID": fid_score,
-    #         "MI-FID": mifid_score,
-    #         "KID": kid_score,
-    #         "LPIPS": lpips_score,
-    #     }
-    # )
-
-    # # Profile flops in final epoch
-    # if epoch == num_epochs - 1:
-    #     profile_flops(key, x, params_tup, fwd_fcn_tup, temp_schedule, log_path)
