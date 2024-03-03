@@ -12,10 +12,6 @@ parser.read("hyperparams.ini")
 
 E_lr = float(parser["OPTIMIZER"]["E_LR"])
 G_lr = float(parser["OPTIMIZER"]["G_LR"])
-E_gamma = float(parser["OPTIMIZER"]["E_GAMMA"])
-G_gamma = float(parser["OPTIMIZER"]["G_GAMMA"])
-E_opt_steps = int(parser["OPTIMIZER"]["E_STEPS"])
-G_opt_steps = int(parser["OPTIMIZER"]["G_STEPS"])
 temp_power = float(parser["TEMP"]["TEMP_POWER"])
 num_temps = int(parser["TEMP"]["NUM_TEMPS"])
 
@@ -44,16 +40,14 @@ def init_GEN(key, image_dim):
 
 
 def init_GEN_optimiser(GEN_params):
-    GEN_schedule = optax.exponential_decay(G_lr, G_gamma, G_opt_steps)
-    GEN_optimiser = optax.adam(GEN_schedule)
+    GEN_optimiser = optax.adam(G_lr)
     GEN_opt_state = GEN_optimiser.init(GEN_params)
 
     return GEN_optimiser, GEN_opt_state
 
 
 def init_EBM_optimiser(EBM_params):
-    E_schedule = optax.exponential_decay(E_lr, E_gamma, E_opt_steps)
-    E_optimiser = optax.adam(E_schedule)
+    E_optimiser = optax.adam(E_lr)
     E_opt_state = E_optimiser.init(EBM_params)
 
     return E_optimiser, E_opt_state

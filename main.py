@@ -147,7 +147,7 @@ for epoch in tqdm_bar:
 key, generated_image = generate(key, params_tup, fwd_fcn_tup)
 
 # Cast from [-1, 1] to [0, 255], uint8
-generated_image = (np.array(generated_image, dtype=np.float32) + 1) * 127.5
+generated_image = (np.array(generated_image[0], dtype=np.float32) + 1) * 127.5
 
 # Plot the generated image
 plt.figure()
