@@ -1,6 +1,6 @@
 import jax
 import jax.numpy as jnp
-from functools import partial
+import optax
 import configparser
 
 parser = configparser.ConfigParser()
@@ -15,7 +15,7 @@ def EBM_fcn(z, EBM_params, EBM_fwd):
     # Forward pass through the energy-based model
     f_z = EBM_fwd(EBM_params, z)
 
-    return f_z.mean()  # Mean across channels
+    return f_z.sum()  # Sum across channels
 
 
 def prior_grad_log(z, EBM_params, EBM_fwd):
@@ -43,8 +43,8 @@ def log_llood_fcn(z, x, t, GEN_params, GEN_fwd):
     # Forward pass through the generator
     g_z = GEN_fwd(GEN_params, z)
 
-    # Mean squared difference between x and g(z)
-    mse = jnp.mean((x - g_z) ** 2)
+    # Mean squared error between x and g(z)
+    mse = jnp.mean(optax.l2_loss(x, x_pred))
 
     # Compute -log[ p_β(x | z)^t ] ∝ -t * [ (x - g(z))^2 / (2 * σ^2) ]
     log_lkhood = -t * (mse) / (2 * pl_sig**2)

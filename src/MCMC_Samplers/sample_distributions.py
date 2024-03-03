@@ -29,7 +29,6 @@ def get_noise_step(key, num_steps, step_size, shape):
     key, subkey = jax.random.split(key)
     return key, step_size * jax.random.normal(subkey, (num_steps,) + shape)
 
-
 def sample_prior(key, EBM_params, EBM_fwd):
     """
     Sample from the prior distribution.

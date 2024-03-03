@@ -1,6 +1,6 @@
 import configparser
+import jax.numpy as jnp
 
-from src.MCMC_Samplers.sample_distributions import sample_prior
 from src.MCMC_Samplers.grad_log_probs import prior_grad_log, posterior_grad_log
 
 parser = configparser.ConfigParser()
@@ -17,7 +17,7 @@ def langevin_prior(z, noise, EBM_params, EBM_fwd):
     grad_f = prior_grad_log(z, EBM_params, EBM_fwd)
     
     # Update z_prior
-    new_z = z + prior_s * prior_s * grad_f + noise
+    new_z = z - (prior_s * grad_f) + (noise * jnp.sqrt(2 * prior_s))
 
     return new_z, None
 
@@ -27,6 +27,6 @@ def langevin_posterior(z, noise, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
     grad_f = posterior_grad_log(z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
 
     # Update z_posterior
-    new_z = z + posterior_s * posterior_s * grad_f + noise
+    new_z = z - (posterior_s * grad_f) + (noise * jnp.sqrt(2 * posterior_s))
     
     return new_z, None
