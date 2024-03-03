@@ -146,6 +146,10 @@ for epoch in tqdm_bar:
     ax[1].imshow(real_grid)
     ax[1].set_title("Real Image")
     ax[1].axis("off")
-    plt.suptitle(f"Epoch: {epoch}\n FID: {fid}, MI-FID: {mifid}, KID: {kid}")
+    plt.suptitle(
+        "Epoch: {} \n FID: {:.2f} MI-FID: {:.2f} KID: {:.2f}".format(
+            epoch, fid, mifid, kid
+        )
+    )
     plt.tight_layout()
     plt.savefig(f"images/{epoch}.png", dpi=500)
