@@ -123,11 +123,12 @@ for epoch in tqdm_bar:
             }
         )
 
+    # Generate an image
     key, image = generate(key, params_tup, fwd_fcn_tup)
-    image = (image + 1) * 127.5
-
+    
     # Scale from [-1, 1] to [0, 255]
-    real_image = (x + 1) * 127.5
+    image = (image + 1) * 127.5
+    real_image = (x[0] + 1) * 127.5
 
     # Plot the generated image and real image
     fig, ax = plt.subplots(1, 2)
@@ -137,6 +138,7 @@ for epoch in tqdm_bar:
     ax[1].imshow(real_image.astype(np.uint8))
     ax[1].set_title("Real Image")
     ax[1].axis("off")
+    plt.title(f"Epoch: {epoch}")
     plt.savefig(f"images/{epoch}.png")
 
     tqdm_bar.set_postfix(
