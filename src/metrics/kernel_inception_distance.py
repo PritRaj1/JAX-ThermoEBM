@@ -1,32 +1,20 @@
 import jax.numpy as jnp
+from sklearn.metrics import pairwise_kernels
 
 
-def kernel(x, y, sigma=0.1):
-    """RKHS kernel."""
-    return jnp.exp(-jnp.sum((x - y) ** 2) / (2 * sigma**2))
+def kernel_matrix(x, y, gamma):
+    """Compute the kernel matrix."""
+    return pairwise_kernels(x, y, metric='rbf', gamma=gamma)
 
+def calculate_kid(x, y):
+    """Calculate the kernel inception distance."""
 
-def calculate_kid(real_features, fake_features):
-    """
-    Emprical maximum mean discrepancy.
+    # Set the kernel width as 1/num_features
+    gamma = 1.0 / x.shape[-1]
 
+    # Compute the kernel matrices
+    k_xx = kernel_matrix(x, x, gamma)
+    k_yy = kernel_matrix(y, y, gamma)
+    k_xy = kernel_matrix(x, y, gamma)
 
-    https://doi.org/10.48550/arXiv.2206.10935
-    """
-    n, m = real_features.shape[-1], fake_features.shape[-1]
-
-    # Calculate the kernel
-    k_xx = jnp.mean(
-        kernel(real_features[:,i], fake_features[:,j]) for i in range(n) for j in range(n)
-    )
-    k_yy = jnp.mean(
-        kernel(fake_features[:,i], fake_features[:,j]) for i in range(m) for j in range(m)
-    )
-    k_xy = jnp.mean(
-        kernel(real_features[:,i], fake_features[:,j]) for i in range(n) for j in range(m)
-    )
-
-    # Calculate the MMD
-    mmd = k_xx + k_yy - 2 * k_xy
-
-    return mmd
+    return k_xx.mean() + k_yy.mean() - 2 * k_xy.mean()

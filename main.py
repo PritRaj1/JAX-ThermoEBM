@@ -131,8 +131,7 @@ for epoch in tqdm_bar:
             }
         )
 
-    # Generate an image
-    key, image = generate(key, params_tup, 4, fwd_fcn_tup)
+    # 
 
     fake_grid = make_grid(image, n_row=2)
     real_grid = make_grid(x[:4], n_row=2)
