@@ -1,10 +1,9 @@
 import jax
-import jax.numpy as jnp
 from functools import partial
 import configparser
 from jax.lax import scan
 
-from src.MCMC_Samplers.grad_log_probs import prior_grad_log, posterior_grad_log
+from src.MCMC_Samplers.langevin_updates import langevin_prior, langevin_posterior
 
 parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")
@@ -18,22 +17,17 @@ prior_s = float(parser["MCMC"]["E_STEP_SIZE"])
 posterior_steps = int(parser["MCMC"]["G_SAMPLE_STEPS"])
 posterior_s = float(parser["MCMC"]["G_STEP_SIZE"])
 
-
-def update_step(key, x, grad_f, s):
-    """Update the current state of the sampler."""
-    x += s * s * grad_f
-
-    key, subkey = jax.random.split(key)
-    x += jnp.sqrt(2) * s * jax.random.normal(subkey, x.shape)
-
-    return key, x
-
-
 def sample_p0(key):
     """Sample from the prior distribution."""
 
     key, subkey = jax.random.split(key)
     return key, p0_sig * jax.random.normal(subkey, (1, 1, z_channels))
+
+def get_noise_step(key, num_steps, step_size, shape):
+    """Get all noises for the MCMC steps."""
+
+    key, subkey = jax.random.split(key)
+    return key, step_size * jax.random.normal(subkey, (num_steps,) + shape)
 
 
 def sample_prior(key, EBM_params, EBM_fwd):
@@ -50,20 +44,18 @@ def sample_prior(key, EBM_params, EBM_fwd):
     - z: latent space variable sampled from p_a(x)
     """
 
-    def MCMC_steps(carry, _, EBM_params, EBM_fwd):
+    scan_MCMC = partial(langevin_prior, EBM_params=EBM_params, EBM_fwd=EBM_fwd)
 
-        key, z = carry
-        grad_f = prior_grad_log(z, EBM_params, EBM_fwd)
-        key, z = update_step(key, z, grad_f, prior_s)
-        return (key, z), None
+    # Sample from the original latent space
+    key, z0 = sample_p0(key)
 
-    scan_MCMC = partial(MCMC_steps, EBM_params=EBM_params, EBM_fwd=EBM_fwd)
+    # Sample all noise at once, to avoid reseeding the PRNG and reduce overhead
+    key, noise = get_noise_step(key, prior_steps, prior_s, z0.shape)
 
-    key0, z0 = sample_p0(key)
-    (final_key, final_z), _ = scan(scan_MCMC, (key0, z0), None, length=prior_steps)
+    # Scan over the MCMC steps
+    z_prior, _ = scan(scan_MCMC, z0, noise, length=prior_steps)
 
-    return final_key, final_z
-
+    return key, z_prior
 
 def sample_posterior(key, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     """
@@ -71,32 +63,20 @@ def sample_posterior(key, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
 
     Args:
     - key: PRNG key
-    - x: batch of data samples
+    - x: data samples
     - t: current temperature
     - EBM_params: energy-based model parameters
     - GEN_params: generator parameters
     - EBM_fwd: energy-based model forward pass, --immutable
     - GEN_fwd: generator forward pass, --immutable
-    - posterior_steps: number of MCMC steps
-    - posterior_grad_log: function for computing gradient of log posterior
-    - update_step: function for updating MCMC state
-    - sample_p0: function for sampling initial state
-    - posterior_s: MCMC step size
 
     Returns:
     - key: PRNG key
     - z_samples: samples from the posterior distribution indexed by temperature
     """
 
-    def MCMC_steps(carry, _, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
-
-        key, z = carry
-        grad_f = posterior_grad_log(z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
-        key, z = update_step(key, z, grad_f, posterior_s)
-        return (key, z), None
-
     scan_MCMC = partial(
-        MCMC_steps,
+        langevin_posterior,
         x=x,
         t=t,
         EBM_params=EBM_params,
@@ -105,7 +85,13 @@ def sample_posterior(key, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
         GEN_fwd=GEN_fwd,
     )
 
-    key0, z0 = sample_p0(key)
-    (final_key, final_z), _ = scan(scan_MCMC, (key0, z0), None, length=posterior_steps)
+    # Sample from the original latent space
+    key, z0 = sample_p0(key)
 
-    return final_key, final_z
+    # Sample all noise at once, to avoid reseeding the PRNG and reduce overhead
+    key, noise = get_noise_step(key, posterior_steps, posterior_s, z0.shape)
+
+    # Scan over the MCMC steps
+    z_posterior, _ = scan(scan_MCMC, z0, noise, length=posterior_steps)
+
+    return key, z_posterior
