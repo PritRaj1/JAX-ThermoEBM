@@ -5,7 +5,7 @@ from functools import partial
 import optax
 
 from src.MCMC_Samplers.sample_distributions import sample_prior
-from src.pipeline.loss_fcn import ThermoEBM_loss, ThermoGEN_loss
+from src.pipeline.loss_computation.loss_fcn import ThermoEBM_loss, ThermoGEN_loss
 
 
 def get_losses_and_grads(key, x, params_tup, fwd_fcn_tup, temp_schedule):
@@ -87,9 +87,5 @@ def get_grad_var(grad_ebm, grad_gen):
     # Flatten the gradients
     grad_ebm = jnp.concatenate([jnp.ravel(g) for g in grad_ebm])
     grad_gen = jnp.concatenate([jnp.ravel(g) for g in grad_gen])
-
-    # NaN to small noise, to prevent NaNs in grad variance
-    grad_ebm = jnp.nan_to_num(grad_ebm, nan=1e-6)
-    grad_gen = jnp.nan_to_num(grad_gen, nan=1e-6)
 
     return jnp.var(jnp.concatenate([grad_ebm, grad_gen]))

@@ -44,7 +44,7 @@ def log_llood_fcn(z, x, t, GEN_params, GEN_fwd):
     g_z = GEN_fwd(GEN_params, z)
 
     # Mean squared error between x and g(z)
-    mse = jnp.mean(optax.l2_loss(x, x_pred))
+    mse = jnp.mean(optax.l2_loss(x, g_z))
 
     # Compute -log[ p_β(x | z)^t ] ∝ -t * [ (x - g(z))^2 / (2 * σ^2) ]
     log_lkhood = -t * (mse) / (2 * pl_sig**2)

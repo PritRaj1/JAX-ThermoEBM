@@ -1,10 +1,5 @@
 import jax
-import optax
-from functools import partial
-from jax import value_and_grad
 import configparser
-import numpy as np
-import matplotlib.pyplot as plt
 
 from src.pipeline.update_steps import *
 
@@ -28,9 +23,9 @@ def train_step(
         sub_key_batch, x, params_tup, fwd_fcn_tup, temp_schedule
     )
 
-    # Take mean across batch
-    grad_ebm = jax.tree_util.tree_map(lambda x: x.mean(0), batch_grad_e)
-    grad_gen = jax.tree_util.tree_map(lambda x: x.mean(0), batch_grad_g)
+    # Take sum across batch, (reduction = sum, as used in Pang et al.)
+    grad_ebm = jax.tree_util.tree_map(lambda x: x.sum(0), batch_grad_e)
+    grad_gen = jax.tree_util.tree_map(lambda x: x.sum(0), batch_grad_g)
 
     grad_list = [grad_ebm, grad_gen]
 
@@ -39,7 +34,7 @@ def train_step(
         optimiser_tup, grad_list, opt_state_tup, params_tup
     )
 
-    total_loss = batch_loss_e.mean() + batch_loss_g.mean()  # L_e + L_g
+    total_loss = batch_loss_e.sum() + batch_loss_g.sum()  # L_e + L_g
     grad_var = get_grad_var(*grad_list)
 
     # print(f"Total Loss: {total_loss}, Grad Var: {grad_var}")
@@ -59,10 +54,10 @@ def val_step(key, x, params_tup, fwd_fcn_tup, temp_schedule):
     )
 
     # Take mean across batch
-    grad_ebm = jax.tree_util.tree_map(lambda x: x.mean(0), batch_grad_e)
-    grad_gen = jax.tree_util.tree_map(lambda x: x.mean(0), batch_grad_g)
+    grad_ebm = jax.tree_util.tree_map(lambda x: x.sum(0), batch_grad_e)
+    grad_gen = jax.tree_util.tree_map(lambda x: x.sum(0), batch_grad_g)
 
-    total_loss = batch_loss_e.mean() + batch_loss_g.mean()  # L_e + L_g
+    total_loss = batch_loss_e.sum() + batch_loss_g.sum()  # L_e + L_g
     grad_var = get_grad_var(grad_ebm, grad_gen)
 
     return key, total_loss, grad_var

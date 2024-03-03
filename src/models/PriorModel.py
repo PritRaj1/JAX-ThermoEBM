@@ -12,7 +12,7 @@ class EBM(nn.Module):
 
     @nn.compact
     def __call__(self, z):
-        f = nn.activation.elu
+        f = nn.activation.leaky_relu
         
         z = nn.Dense(hidden_units)(z)
         z = f(z, activation_coef)
