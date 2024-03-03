@@ -10,12 +10,13 @@ import tqdm
 from src.pipeline.initialise import *
 from src.pipeline.batch_steps import train_step, val_step
 from src.pipeline.generate import generate
+from src.metrics.get_metrics import profile_image
 from src.utils.helper_functions import get_data, make_grid, NumpyLoader
 
 # from src.pipeline.metrics import profile_flops
 
 # tf.config.experimental.set_visible_devices([], "GPU")
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.98"
+os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.6"
 # os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 # os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"]="platform"
 # os.environ["XLA_FLAGS"] = ("--xla_gpu_strict_conv_algorithm_picker=false --xla_gpu_force_compilation_parallelism=1")
@@ -44,7 +45,7 @@ num_val_data = int(parser["PIPELINE"]["NUM_VAL_DATA"])
 batch_size = int(parser["PIPELINE"]["BATCH_SIZE"])
 num_epochs = int(parser["PIPELINE"]["NUM_EPOCHS"])
 
-dataset, val_dataset, image_dim = get_data(data_set_name)
+dataset, val_dataset = get_data(data_set_name)
 
 # Take a subset of the dataset
 train_data = torch.utils.data.Subset(dataset, range(num_train_data))
@@ -109,17 +110,24 @@ for epoch in tqdm_bar:
 
     batch_bar = tqdm.tqdm(val_loader, leave=False)
     for x, _ in batch_bar:
-        key, batch_loss, batch_var, fid_score, mifid_score, kid_score, lpips_score = jit_val_step(
+        key, batch_loss, batch_var = jit_val_step(
             key, x, params_tup, fwd_fcn_tup, temp_schedule
         )
 
         val_loss += batch_loss
         val_grad_var += batch_var
 
+        # Profile generative capacity
+        key, fake_images = generate(key, params_tup, batch_size, fwd_fcn_tup)
+        fid, mifid, kid = profile_image(x, fake_images)
+
         batch_bar.set_postfix(
             {
                 "Val Loss": batch_loss,
                 "Val Grad Var": batch_var,
+                "FID": fid,
+                "MI-FID": mifid,
+                "KID": kid,
             }
         )
 

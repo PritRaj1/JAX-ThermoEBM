@@ -2,8 +2,6 @@ import jax
 import configparser
 
 from src.pipeline.update_steps import *
-from src.pipeline.generate import generate
-# from src.utils.metrics import profile_image
 
 parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")
@@ -62,8 +60,4 @@ def val_step(key, x, params_tup, fwd_fcn_tup, temp_schedule):
     total_loss = batch_loss_e.sum() + batch_loss_g.sum()  # L_e + L_g
     grad_var = get_grad_var(grad_ebm, grad_gen)
 
-    # # Profile generative capacity
-    # key, fake_images = generate(key, params_tup, batch_size, fwd_fcn_tup)
-    # fid_score, mifid_score, kid_score, lpips_score = profile_image(x, fake_images)
-
-    return key, total_loss, grad_var, fid_score, mifid_score, kid_score, lpips_score
+    return key, total_loss, grad_var

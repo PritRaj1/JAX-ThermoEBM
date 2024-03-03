@@ -7,7 +7,7 @@ parser.read("hyperparams.ini")
 feature_dim = int(parser["GEN"]["GEN_FEATURE_DIM"])
 output_dim = int(parser["GEN"]["CHANNELS"])
 activation_coef = float(parser["GEN"]["GEN_ACTIVATION_COEF"])
-image_dim = 64 if parser["PIPELINE"]["DATASET"] == "CIFAR10" else 32
+image_dim = 64 if parser["PIPELINE"]["DATASET"] == "CelebA" else 32
 
 
 class GEN(nn.Module):

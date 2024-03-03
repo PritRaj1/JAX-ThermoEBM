@@ -103,7 +103,7 @@ def get_data(name):
     else:
         raise ValueError("Invalid dataset name.")
 
-    return data["train"], data["test"], img_dim
+    return data["train"], data["test"]
 
 
 def make_grid(images, n_row=4, padding=2, pad_value=0):
