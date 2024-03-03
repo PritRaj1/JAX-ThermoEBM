@@ -135,6 +135,7 @@ for epoch in tqdm_bar:
     ax[1].set_title("Real Image")
     ax[1].axis("off")
     plt.suptitle(f"Epoch: {epoch}")
+    plt.tight_layout()
     plt.savefig(f"images/{epoch}.png", dpi=1000)
 
     tqdm_bar.set_postfix(
