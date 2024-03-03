@@ -124,13 +124,20 @@ for epoch in tqdm_bar:
         )
 
     key, image = generate(key, params_tup, fwd_fcn_tup)
-    image = np.array(image, dtype=np.float32) * 0.5 + 0.5
+    image = (image + 1) * 127.5
 
-    plt.figure()
-    plt.imshow(image, interpolation="nearest")
-    plt.axis("off")
-    plt.title(f"Epoch: {epoch}")
-    plt.savefig(f"images/epoch_{epoch}.png", dpi=750)
+    # Scale from [-1, 1] to [0, 255]
+    real_image = (x + 1) * 127.5
+
+    # Plot the generated image and real image
+    fig, ax = plt.subplots(1, 2)
+    ax[0].imshow(image.astype(np.uint8))
+    ax[0].set_title("Generated Image")
+    ax[0].axis("off")
+    ax[1].imshow(real_image.astype(np.uint8))
+    ax[1].set_title("Real Image")
+    ax[1].axis("off")
+    plt.savefig(f"images/{epoch}.png")
 
     tqdm_bar.set_postfix(
         {
@@ -142,15 +149,3 @@ for epoch in tqdm_bar:
     # # Profile flops in final epoch
     # if epoch == num_epochs - 1:
     #     profile_flops(key, x, params_tup, fwd_fcn_tup, temp_schedule, log_path)
-
-# Generate an image
-key, generated_image = generate(key, params_tup, fwd_fcn_tup)
-
-# Cast from [-1, 1] to [0, 255], uint8
-generated_image = (np.array(generated_image[0], dtype=np.float32) + 1) * 127.5
-
-# Plot the generated image
-plt.figure()
-plt.imshow(generated_image, interpolation="nearest")
-plt.axis("off")
-plt.savefig("generated_image.png", dpi=1000)

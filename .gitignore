@@ -2,3 +2,4 @@ dataset/
 logs/
 *.out
 images/
+*.png

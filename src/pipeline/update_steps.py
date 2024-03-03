@@ -72,10 +72,11 @@ def update_params(optimiser_tup, grad_list, opt_state_tup, params_tup):
 
 
 def generate(key, params_tup, fwd_fcn_tup):
+    """Generates a single image from the generator."""
     key, z = sample_prior(key, params_tup[0], fwd_fcn_tup[0])
     x_pred = fwd_fcn_tup[1](params_tup[1], jax.lax.stop_gradient(z))
 
-    return key, x_pred[0]
+    return key, x_pred
 
 
 def get_grad_var(grad_ebm, grad_gen):
