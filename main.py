@@ -55,7 +55,7 @@ test_loader = NumpyLoader(train_data, batch_size=batch_size, shuffle=True)
 val_loader = NumpyLoader(val_data, batch_size=batch_size, shuffle=False)
 
 key, EBM_params, EBM_fwd = init_EBM(key)
-key, GEN_params, GEN_fwd = init_GEN(key, image_dim)
+key, GEN_params, GEN_fwd = init_GEN(key)
 
 EBM_optimiser, EBM_opt_state = init_EBM_optimiser(EBM_params)
 GEN_optimiser, GEN_opt_state = init_GEN_optimiser(GEN_params)

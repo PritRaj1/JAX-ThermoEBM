@@ -28,10 +28,11 @@ def init_EBM(key):
     return key, EBM_params, GEN_fwd
 
 
-def init_GEN(key, image_dim):
+def init_GEN(key):
     key, z_init = sample_p0(key)
 
-    GEN_model = GEN(image_dim)
+    GEN_model = GEN()
+    
     GEN_params = GEN_model.init(key, z_init)
 
     GEN_fwd = GEN_model.apply
