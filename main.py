@@ -12,7 +12,7 @@ import tqdm
 from src.pipeline.initialise import *
 from src.pipeline.batch_steps import train_step, val_step
 from src.pipeline.generate import generate
-from src.metrics.get_metrics import profile_image
+from src.metrics.unbiased_metrics import profile_generation
 from src.utils.helper_functions import get_data, make_grid, NumpyLoader
 
 # Set plot styling
@@ -22,7 +22,9 @@ rc("text", usetex=True)
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.8"
 # os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"] = "platform"
-os.environ["XLA_FLAGS"] = "--xla_gpu_strict_conv_algorithm_picker=false --xla_gpu_force_compilation_parallelism=1"
+os.environ["XLA_FLAGS"] = (
+    "--xla_gpu_strict_conv_algorithm_picker=false --xla_gpu_force_compilation_parallelism=1"
+)
 
 print(f"Device: {jax.default_backend()}")
 key = jax.random.PRNGKey(0)
@@ -46,12 +48,8 @@ val_data = torch.utils.data.Subset(val_dataset, range(num_val_data))
 train_loader = NumpyLoader(train_data, batch_size=batch_size, shuffle=True)
 val_loader = NumpyLoader(val_data, batch_size=batch_size, shuffle=False)
 
-# Stack into jnp array for scanning 
-# train_x = np.stack([x for x, _ in train_loader])
+# Stack into jnp array for scanning and metric comparisons
 val_x = np.stack([x for x, _ in val_loader])
-
-# Extract all x for image comparisons
-image_real = np.array([val_data[i][0] for i in range(100)])
 
 key, EBM_params, EBM_fwd = init_EBM(key)
 key, GEN_params, GEN_fwd = init_GEN(key)
@@ -77,29 +75,28 @@ print(f"Number of parameters in generator: {GEN_param_count}")
 print(f"Number of parameters in EBM: {EBM_param_count}")
 
 # Preload the functions with immutable arguments
-loaded_train_step = partial(train_step, optimiser_tup=optimiser_tup, fwd_fcn_tup=fwd_fcn_tup, temp_schedule=temp_schedule)
-loaded_val_step = partial(val_step, fwd_fcn_tup=fwd_fcn_tup, temp_schedule=temp_schedule)
-loaded_generate = partial(generate, num_images=len(image_real), fwd_fcn_tup=fwd_fcn_tup)
+loaded_train_step = partial(
+    train_step,
+    optimiser_tup=optimiser_tup,
+    fwd_fcn_tup=fwd_fcn_tup,
+    temp_schedule=temp_schedule,
+)
+loaded_val_step = partial(
+    val_step, fwd_fcn_tup=fwd_fcn_tup, temp_schedule=temp_schedule
+)
+x_loaded_generate = partial(generate, x=val_x, fwd_fcn_tup=fwd_fcn_tup)
 
 # Jit the functions
 jit_train_step = jax.jit(loaded_train_step)
 jit_val_step = jax.jit(loaded_val_step)
 
-# def train_batches(carry, x):
-#     key, params_tup, opt_state_tup = carry
-    
-#     key, params_tup, opt_state_tup, loss, var = jit_train_step(
-#         key, x, params_tup, opt_state_tup
-#     )
-#     return (key, params_tup, opt_state_tup), (loss, var)
 
 def val_batches(carry, x, params_tup):
     key = carry
-    
-    key, loss, var = jit_val_step(
-        key, x, params_tup
-    )
+
+    key, loss, var = jit_val_step(key, x, params_tup)
     return (key), (loss, var)
+
 
 # Train the model
 tqdm_bar = tqdm.tqdm(range(num_epochs))
@@ -113,30 +110,28 @@ for epoch in tqdm_bar:
         key, params_tup, opt_state_tup, train_loss, train_grad_var = jit_train_step(
             key, x, params_tup, opt_state_tup
         )
-        train_bar.set_description(f"Train Loss: {train_loss}, Train Grad Var: {train_grad_var}")
+        train_bar.set_description(
+            f"Train Loss: {train_loss}, Train Grad Var: {train_grad_var}"
+        )
         train_loss += train_loss
         train_grad_var += train_grad_var
 
     # train_loss = train_loss / len(train_loader)
     # train_grad_var = train_grad_var / len(train_loader)
 
-    # Validate 
+    # Validate
     key, (val_loss, val_grad_var) = jax.lax.scan(
-        f = partial(val_batches, params_tup=params_tup),
-        init = key,
-        xs = val_x
+        f=partial(val_batches, params_tup=params_tup), init=key, xs=val_x
     )
 
     val_loss = val_loss.sum()
     val_grad_var = val_grad_var.sum()
 
-    # Profile generative capacity
-    key, fake_images = loaded_generate(key, params_tup)
-    fid, mifid, kid = profile_image(image_real, fake_images)
-
-    random_indices = np.random.choice(len(fake_images), 4, replace=False)
-    four_fake = np.array([fake_images[i] for i in random_indices])
-    four_real = np.array([image_real[i] for i in random_indices])
+    # Profile generative capacity using unbiased metrics
+    loaded_generate = partial(x_loaded_generate, params_tup=params_tup)
+    key, fid_inf, mifid_inf, kid_inf, four_fake, four_real = profile_generation(
+        loaded_generate, val_data, data_set_name
+    )
 
     fake_grid = make_grid(four_fake, n_row=2)
     real_grid = make_grid(four_real, n_row=2)
@@ -149,8 +144,8 @@ for epoch in tqdm_bar:
     ax[1].set_title("Real Images")
     ax[1].axis("off")
     plt.suptitle(
-        "Epoch: {} \n\n FID: {:.2f}, MI-FID: {:.2f}, KID: {:.2f}".format(
-            epoch, fid, mifid, kid
+        r"Epoch: {} \n\n $\bar{FID}_\infty$: {:.2f}, $\bar{MIFID}_\infty$: {:.2f}, $\bar{KID}_\infty$: {:.2f}".format(
+            epoch, fid_inf, mifid_inf, kid_inf
         )
     )
     plt.tight_layout()
