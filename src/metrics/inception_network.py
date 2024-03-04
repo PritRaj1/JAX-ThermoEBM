@@ -1,25 +1,21 @@
+from tensorflow.image import resize
 from tensorflow.keras.applications import InceptionV3
 import numpy as np
 import configparser
-from jax.image import resize
-import jax
 
 parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")
 
-inception_model = InceptionV3(weights="imagenet", include_top=True, pooling="avg")
+inception_model = InceptionV3(weights="imagenet", include_top=False, pooling="avg", input_shape=(75, 75, 3))
 
 
-def preprocess_image(image):
-    image = resize(image, (229, 229, 3), method="bilinear")
-    return image
-
-
-preprocess = jax.vmap(preprocess_image, in_axes=(0))
-
-
-# Define the function to extract features
 def extract_features(images):
-    images = np.asanyarray(preprocess(images))
-    features = inception_model(images)
-    return features
+    images = np.asarray(images)
+    images = resize(images, (75, 75))
+    features = np.zeros((images.shape[0], 2048))
+
+    for idx, image in enumerate(images):
+        image = np.expand_dims(image, axis=0)
+        features[idx] = np.asarray(inception_model(image))
+
+    return features 

@@ -1,25 +1,36 @@
 import jax.numpy as jnp
+from jax.scipy.linalg import cholesky
 
 
-def calculate_fid(real_features, fake_features):
+def calculate_fid(real_features, fake_features, eps=1e-5):
     """
     Frechet Inception Distance.
 
     https://doi.org/10.48550/arXiv.1706.08500
+
+    Args:
+    - real_features: features of real x extracted by InceptionV3
+    - fake_features: features of fake x extracted by InceptionV3
+    - eps: manually tuned regularization term to avoid numerical instability
+
+    Returns:
+    - fid: the Frechet Inception Distance
     """
 
     # Mean and covariances
-    mu_real = real_features.mean(axis=-1)
-    mu_fake = fake_features.mean(axis=-1)
+    mu_real = real_features.mean(axis=0)
+    mu_fake = fake_features.mean(axis=0)
+    var_real = jnp.cov(real_features, rowvar=False, bias=True) + eps * jnp.eye(real_features.shape[-1])
+    var_fake = jnp.cov(fake_features, rowvar=False, bias=True) + eps * jnp.eye(fake_features.shape[-1])
 
-    var_real = jnp.cov(real_features, real_features, rowvar=True)
-    var_fake = jnp.cov(fake_features, fake_features, rowvar=True)
+    # Cholesky decomposition
+    L_real = cholesky(var_real, lower=True)
+    L_fake = cholesky(var_fake, lower=True)
 
     diff = mu_real - mu_fake
+    covmean, _ = jnp.linalg.eigh(L_real @ L_fake)
 
-    return jnp.dot(diff, diff) + jnp.trace(
-        var_real + var_fake - 2 * jnp.sqrt(var_real @ var_fake)
-    )
+    return diff @ diff + jnp.trace(var_real + var_fake - 2 * jnp.diag(covmean))
 
 
 def cosine_similarity(real_features, fake_features):
@@ -31,7 +42,9 @@ def cosine_similarity(real_features, fake_features):
     # Calculate cosine similarity
     cosine_sim = jnp.dot(real_features, fake_features.T) / (real_norm * fake_norm.T)
 
-    return cosine_sim.sum() / (fake_features.shape[0])
+    cosine_sim = jnp.min(cosine_sim, axis=-1)
+
+    return cosine_sim.mean() 
 
 
 def calculate_mifid(real_features, fake_features):
@@ -48,6 +61,6 @@ def calculate_mifid(real_features, fake_features):
     cosine_sim = cosine_similarity(real_features, fake_features)
 
     # Calculate MIFID
-    mifid = fid * (1 - cosine_sim)
+    mifid = fid / (cosine_sim)
 
     return mifid

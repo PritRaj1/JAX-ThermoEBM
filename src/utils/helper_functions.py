@@ -106,7 +106,7 @@ def get_data(name):
     return data["train"], data["test"]
 
 
-def make_grid(images, n_row=4, padding=2, pad_value=0):
+def make_grid(images, n_row=4, padding=1, pad_value=0):
     """Make a grid of images."""
     n_images = images.shape[0]
     n_col = int(np.ceil(n_images / n_row))

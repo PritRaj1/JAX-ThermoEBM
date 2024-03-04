@@ -19,8 +19,8 @@ from src.utils.helper_functions import get_data, make_grid, NumpyLoader
 rc("font", **{"family": "serif", "serif": ["Computer Modern"]}, size=14)
 rc("text", usetex=True)
 
-# os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.9"
-os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
+os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.8"
+# os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"] = "platform"
 os.environ["XLA_FLAGS"] = "--xla_gpu_strict_conv_algorithm_picker=false --xla_gpu_force_compilation_parallelism=1"
 
@@ -47,7 +47,7 @@ train_loader = NumpyLoader(train_data, batch_size=batch_size, shuffle=True)
 val_loader = NumpyLoader(val_data, batch_size=batch_size, shuffle=False)
 
 # Stack into jnp array for scanning 
-train_x = np.stack([x for x, _ in train_loader])
+# train_x = np.stack([x for x, _ in train_loader])
 val_x = np.stack([x for x, _ in val_loader])
 
 # Extract all x for image comparisons
@@ -84,15 +84,14 @@ loaded_generate = partial(generate, num_images=len(image_real), fwd_fcn_tup=fwd_
 # Jit the functions
 jit_train_step = jax.jit(loaded_train_step)
 jit_val_step = jax.jit(loaded_val_step)
-jit_generate = jax.jit(loaded_generate)
 
-def train_batches(carry, x):
-    key, params_tup, opt_state_tup = carry
+# def train_batches(carry, x):
+#     key, params_tup, opt_state_tup = carry
     
-    key, params_tup, opt_state_tup, loss, var = jit_train_step(
-        key, x, params_tup, opt_state_tup
-    )
-    return (key, params_tup, opt_state_tup), (loss, var)
+#     key, params_tup, opt_state_tup, loss, var = jit_train_step(
+#         key, x, params_tup, opt_state_tup
+#     )
+#     return (key, params_tup, opt_state_tup), (loss, var)
 
 def val_batches(carry, x, params_tup):
     key = carry
@@ -106,15 +105,20 @@ def val_batches(carry, x, params_tup):
 tqdm_bar = tqdm.tqdm(range(num_epochs))
 for epoch in tqdm_bar:
 
-    # Train
-    (key, params_tup, opt_state_tup), (train_loss, train_grad_var) = jax.lax.scan(
-        f = train_batches, 
-        init = (key, params_tup, opt_state_tup), 
-        xs = train_x
-    )
+    # Train - cannot scan due to large param count
+    train_bar = tqdm.tqdm(train_loader, leave=False)
+    train_loss = 0
+    train_grad_var = 0
+    for x, _ in train_bar:
+        key, params_tup, opt_state_tup, train_loss, train_grad_var = jit_train_step(
+            key, x, params_tup, opt_state_tup
+        )
+        train_bar.set_description(f"Train Loss: {train_loss}, Train Grad Var: {train_grad_var}")
+        train_loss += train_loss
+        train_grad_var += train_grad_var
 
-    train_loss = train_loss.sum()
-    train_grad_var = train_grad_var.sum()
+    # train_loss = train_loss / len(train_loader)
+    # train_grad_var = train_grad_var / len(train_loader)
 
     # Validate 
     key, (val_loss, val_grad_var) = jax.lax.scan(
@@ -127,21 +131,25 @@ for epoch in tqdm_bar:
     val_grad_var = val_grad_var.sum()
 
     # Profile generative capacity
-    key, fake_images = jit_generate(key, params_tup)
+    key, fake_images = loaded_generate(key, params_tup)
     fid, mifid, kid = profile_image(image_real, fake_images)
 
-    fake_grid = make_grid(np.random.choice(fake_images, 4, replace=False), n_row=2)
-    real_grid = make_grid(np.random.choice(image_real, 4, replace=False), n_row=2)
+    random_indices = np.random.choice(len(fake_images), 4, replace=False)
+    four_fake = np.array([fake_images[i] for i in random_indices])
+    four_real = np.array([image_real[i] for i in random_indices])
+
+    fake_grid = make_grid(four_fake, n_row=2)
+    real_grid = make_grid(four_real, n_row=2)
 
     fig, ax = plt.subplots(1, 2)
     ax[0].imshow(fake_grid)
-    ax[0].set_title("Generated Image")
+    ax[0].set_title("Generated Images")
     ax[0].axis("off")
     ax[1].imshow(real_grid)
-    ax[1].set_title("Real Image")
+    ax[1].set_title("Real Images")
     ax[1].axis("off")
     plt.suptitle(
-        "Epoch: {} \n FID: {:.2f} MI-FID: {:.2f} KID: {:.2f}".format(
+        "Epoch: {:.2f} \n FID: {:.2f} \n MI-FID: {:.2f} \n KID: {:.2f}".format(
             epoch, fid, mifid, kid
         )
     )
