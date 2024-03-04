@@ -18,26 +18,7 @@ from src.utils.helper_functions import get_data, make_grid, NumpyLoader
 rc("font", **{"family": "serif", "serif": ["Computer Modern"]}, size=14)
 rc("text", usetex=True)
 
-# from src.pipeline.metrics import profile_flops
-
-# tf.config.experimental.set_visible_devices([], "GPU")
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.6"
-# os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
-# os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"]="platform"
-# os.environ["XLA_FLAGS"] = ("--xla_gpu_strict_conv_algorithm_picker=false --xla_gpu_force_compilation_parallelism=1")
-# os.environ['XLA_FLAGS'] = (
-#     '--xla_gpu_enable_triton_softmax_fusion=true '
-#     '--xla_gpu_triton_gemm_any=True '
-#     '--xla_gpu_enable_async_collectives=true '
-#     '--xla_gpu_enable_latency_hiding_scheduler=true '
-#     '--xla_gpu_enable_highest_priority_async_stream=true '
-# )
-# os.environ["JAX_TRACEBACK_FILTERING"]="off"
-# os.environ["JAX_DEBUG_NANS"]="True"
-# config.update("jax_debug_nans", True)
-# config.update('jax_disable_jit', True)
-# config.update("jax_enable_x64", True)
-# os.environ["JAX_CHECK_TRACER_LEAKS"] = "True"
+os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.75"
 print(f"Device: {jax.default_backend()}")
 key = jax.random.PRNGKey(0)
 
@@ -55,6 +36,9 @@ dataset, val_dataset = get_data(data_set_name)
 # Take a subset of the dataset
 train_data = torch.utils.data.Subset(dataset, range(num_train_data))
 val_data = torch.utils.data.Subset(val_dataset, range(num_val_data))
+
+# Extract all x for image comparisons
+all_val_x = np.array([val_data[i][0] for i in range(len(val_data))])
 
 # Split dataset
 test_loader = NumpyLoader(train_data, batch_size=batch_size, shuffle=True)
@@ -123,8 +107,8 @@ for epoch in tqdm_bar:
         val_grad_var += batch_var
 
         # Profile generative capacity
-        key, fake_images = generate(key, params_tup, batch_size, fwd_fcn_tup)
-        fid, mifid, kid = profile_image(x, fake_images)
+        key, fake_images = generate(key, params_tup, len(val_data), fwd_fcn_tup)
+        fid, mifid, kid = profile_image(all_val_x, fake_images)
 
         batch_bar.set_postfix(
             {
