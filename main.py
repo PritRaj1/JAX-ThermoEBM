@@ -16,7 +16,7 @@ from src.metrics.get_metrics import profile_image
 from src.utils.helper_functions import get_data, make_grid, NumpyLoader
 
 # Set plot styling
-rc("font", **{"family": "serif", "serif": ["Computer Modern"]}, size=14)
+rc("font", **{"family": "serif", "serif": ["Computer Modern"]}, size=12)
 rc("text", usetex=True)
 
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.8"
@@ -67,7 +67,7 @@ optimiser_tup = (EBM_optimiser, GEN_optimiser)
 opt_state_tup = (EBM_opt_state, GEN_opt_state)
 
 log_path = f"logs/{data_set_name}/{temp_schedule[0]}"
-os.makedirs("images", exist_ok=True)
+os.makedirs(f"images/{data_set_name}", exist_ok=True)
 os.makedirs("logs", exist_ok=True)
 
 # Output number of parameters of generator
@@ -149,9 +149,9 @@ for epoch in tqdm_bar:
     ax[1].set_title("Real Images")
     ax[1].axis("off")
     plt.suptitle(
-        "Epoch: {:.2f} \n FID: {:.2f} \n MI-FID: {:.2f} \n KID: {:.2f}".format(
+        "Epoch: {} \n\n FID: {:.2f}, MI-FID: {:.2f}, KID: {:.2f}".format(
             epoch, fid, mifid, kid
         )
     )
     plt.tight_layout()
-    plt.savefig(f"images/{epoch}.png", dpi=500)
+    plt.savefig(f"images/{data_set_name}/{epoch}.png", dpi=500)

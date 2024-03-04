@@ -12,6 +12,10 @@ parser.read("hyperparams.ini")
 
 E_lr = float(parser["OPTIMIZER"]["E_LR"])
 G_lr = float(parser["OPTIMIZER"]["G_LR"])
+E_beta_1 = float(parser["OPTIMIZER"]["E_BETA_1"])
+G_beta_1 = float(parser["OPTIMIZER"]["G_BETA_1"])
+E_beta_2 = float(parser["OPTIMIZER"]["E_BETA_2"])
+G_beta_2 = float(parser["OPTIMIZER"]["G_BETA_2"])
 temp_power = float(parser["TEMP"]["TEMP_POWER"])
 num_temps = int(parser["TEMP"]["NUM_TEMPS"])
 
@@ -39,19 +43,17 @@ def init_GEN(key):
 
     return key, GEN_params, GEN_fwd
 
-
-def init_GEN_optimiser(GEN_params):
-    GEN_optimiser = optax.adam(G_lr)
-    GEN_opt_state = GEN_optimiser.init(GEN_params)
-
-    return GEN_optimiser, GEN_opt_state
-
-
 def init_EBM_optimiser(EBM_params):
-    E_optimiser = optax.adam(E_lr)
+    E_optimiser = optax.adam(E_lr, b1=E_beta_1, b2=E_beta_2)
     E_opt_state = E_optimiser.init(EBM_params)
 
     return E_optimiser, E_opt_state
+
+def init_GEN_optimiser(GEN_params):
+    GEN_optimiser = optax.adam(G_lr, b1=G_beta_1, b2=G_beta_2)
+    GEN_opt_state = GEN_optimiser.init(GEN_params)
+
+    return GEN_optimiser, GEN_opt_state
 
 
 def init_temp_schedule():
