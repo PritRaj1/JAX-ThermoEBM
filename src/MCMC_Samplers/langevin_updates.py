@@ -14,22 +14,30 @@ prior_s = float(parser["MCMC"]["E_STEP_SIZE"])
 posterior_steps = int(parser["MCMC"]["G_SAMPLE_STEPS"])
 posterior_s = float(parser["MCMC"]["G_STEP_SIZE"])
 
-def langevin_prior(z, noise, EBM_params, EBM_fwd):
 
-    # Compute the gradient of the log prior
+def langevin_prior(z, noise, EBM_params, EBM_fwd):
+    """
+    Prior langevin update
+
+    z_{i+1} = z_i - s * ∇_z( log[p_a(x)] ) + ϵ * √(2s)
+    """
+
     grad_f = prior_grad_log(z, EBM_params, EBM_fwd) + (z / p0_sig**2)
-    
-    # Update z_prior
     new_z = z - (prior_s * grad_f) + (noise * jnp.sqrt(2 * prior_s))
 
     return new_z, None
 
+
 def langevin_posterior(z, noise, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
+    """
+    Posterior langevin update
 
-    # Compute the gradient of the log posterior
-    grad_f = posterior_grad_log(z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd) + (z / p0_sig**2)
+    z_{i+1} = z_i - s * ∇_z( log[p(x | z)^t * p(z)] ) + ϵ * √(2s)
+    """
 
-    # Update z_posterior
+    grad_f = posterior_grad_log(z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd) + (
+        z / p0_sig**2
+    )
     new_z = z - (posterior_s * grad_f) + (noise * jnp.sqrt(2 * posterior_s))
-    
+
     return new_z, None

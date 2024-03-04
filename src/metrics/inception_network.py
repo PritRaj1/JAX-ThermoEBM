@@ -1,5 +1,6 @@
 from tensorflow.image import resize
 from tensorflow.keras.applications import InceptionV3
+import jax.numpy as jnp
 import numpy as np
 import configparser
 
@@ -18,4 +19,4 @@ def extract_features(images):
         image = np.expand_dims(image, axis=0)
         features[idx] = np.asarray(inception_model(image))
 
-    return features 
+    return jnp.asarray(features)

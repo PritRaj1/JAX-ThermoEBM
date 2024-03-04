@@ -11,7 +11,6 @@ import tqdm
 
 from src.pipeline.initialise import *
 from src.pipeline.batch_steps import train_step, val_step
-from src.pipeline.generate import generate
 from src.metrics.unbiased_metrics import profile_generation
 from src.utils.helper_functions import get_data, make_grid, NumpyLoader
 
@@ -19,7 +18,7 @@ from src.utils.helper_functions import get_data, make_grid, NumpyLoader
 rc("font", **{"family": "serif", "serif": ["Computer Modern"]}, size=12)
 rc("text", usetex=True)
 
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.8"
+os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.9"
 # os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"] = "platform"
 os.environ["XLA_FLAGS"] = (
@@ -37,6 +36,10 @@ num_train_data = int(parser["PIPELINE"]["NUM_TRAIN_DATA"])
 num_val_data = int(parser["PIPELINE"]["NUM_VAL_DATA"])
 batch_size = int(parser["PIPELINE"]["BATCH_SIZE"])
 num_epochs = int(parser["PIPELINE"]["NUM_EPOCHS"])
+min_samples = int(parser["GENERATION_EVAL"]["MIN_SAMPLES"])
+max_samples = int(parser["GENERATION_EVAL"]["MAX_SAMPLES"])
+num_points = int(parser["GENERATION_EVAL"]["NUM_POINTS"])
+num_plot = int(parser["GENERATION_EVAL"]["NUM_PLOT"])
 
 dataset, val_dataset = get_data(data_set_name)
 
@@ -47,9 +50,8 @@ val_data = torch.utils.data.Subset(val_dataset, range(num_val_data))
 # Split dataset
 train_loader = NumpyLoader(train_data, batch_size=batch_size, shuffle=True)
 val_loader = NumpyLoader(val_data, batch_size=batch_size, shuffle=False)
+val_x = np.stack([x for x, _ in val_loader]) # Stack into jnp array for scanning and metric comparisons
 
-# Stack into jnp array for scanning and metric comparisons
-val_x = np.stack([x for x, _ in val_loader])
 
 key, EBM_params, EBM_fwd = init_EBM(key)
 key, GEN_params, GEN_fwd = init_GEN(key)
@@ -74,7 +76,7 @@ GEN_param_count = sum(x.size for x in jax.tree_util.tree_leaves(GEN_params))
 print(f"Number of parameters in generator: {GEN_param_count}")
 print(f"Number of parameters in EBM: {EBM_param_count}")
 
-# Preload the functions with immutable arguments
+# Preload the pipeline functions with immutable arguments
 loaded_train_step = partial(
     train_step,
     optimiser_tup=optimiser_tup,
@@ -84,25 +86,31 @@ loaded_train_step = partial(
 loaded_val_step = partial(
     val_step, fwd_fcn_tup=fwd_fcn_tup, temp_schedule=temp_schedule
 )
-x_loaded_generate = partial(generate, x=val_x, fwd_fcn_tup=fwd_fcn_tup)
 
-# Jit the functions
+# Jit the pipeline functions
 jit_train_step = jax.jit(loaded_train_step)
 jit_val_step = jax.jit(loaded_val_step)
 
+# Preload the metric function
+metrics_fcn = partial(profile_generation,
+                        x=np.stack([x for x, _ in val_data]), # Send all val data
+                        fwd_fcn_tup=fwd_fcn_tup,
+                        min_samples=min_samples,
+                        max_samples=max_samples,
+                        num_points=num_points,
+                        num_plot=num_plot)
 
 def val_batches(carry, x, params_tup):
+    """Batch validation fcn for scanning."""
     key = carry
-
     key, loss, var = jit_val_step(key, x, params_tup)
     return (key), (loss, var)
 
 
-# Train the model
 tqdm_bar = tqdm.tqdm(range(num_epochs))
 for epoch in tqdm_bar:
 
-    # Train - cannot scan due to large param count
+    # Train - cannot scan due to large param count, default to for loop
     train_bar = tqdm.tqdm(train_loader, leave=False)
     train_loss = 0
     train_grad_var = 0
@@ -116,9 +124,6 @@ for epoch in tqdm_bar:
         train_loss += train_loss
         train_grad_var += train_grad_var
 
-    # train_loss = train_loss / len(train_loader)
-    # train_grad_var = train_grad_var / len(train_loader)
-
     # Validate
     key, (val_loss, val_grad_var) = jax.lax.scan(
         f=partial(val_batches, params_tup=params_tup), init=key, xs=val_x
@@ -128,10 +133,7 @@ for epoch in tqdm_bar:
     val_grad_var = val_grad_var.sum()
 
     # Profile generative capacity using unbiased metrics
-    loaded_generate = partial(x_loaded_generate, params_tup=params_tup)
-    key, fid_inf, mifid_inf, kid_inf, four_fake, four_real = profile_generation(
-        loaded_generate, val_data, data_set_name
-    )
+    key, fid_inf, mifid_inf, kid_inf, four_fake, four_real = metrics_fcn(key, params_tup)
 
     fake_grid = make_grid(four_fake, n_row=2)
     real_grid = make_grid(four_real, n_row=2)
@@ -144,7 +146,7 @@ for epoch in tqdm_bar:
     ax[1].set_title("Real Images")
     ax[1].axis("off")
     plt.suptitle(
-        r"Epoch: {} \n\n $\bar{FID}_\infty$: {:.2f}, $\bar{MIFID}_\infty$: {:.2f}, $\bar{KID}_\infty$: {:.2f}".format(
+        r"Epoch: {} \n\n $\bar{FID}_\infty$: {:.2f}, $\bar{MI-FID}_\infty$: {:.2f}, $\bar{KID}_\infty$: {:.2f}".format(
             epoch, fid_inf, mifid_inf, kid_inf
         )
     )
