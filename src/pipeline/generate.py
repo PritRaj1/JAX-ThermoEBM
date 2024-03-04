@@ -1,6 +1,8 @@
 import jax
+from functools import partial
 from src.MCMC_Samplers.sample_distributions import sample_prior
 
+@partial(jax.jit, static_argnums=2)
 def generate_one(key, params_tup, fwd_fcn_tup):
         """Generates a single image from the generator."""
         key, z = sample_prior(key, params_tup[0], fwd_fcn_tup[0])

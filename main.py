@@ -3,6 +3,7 @@ from jax import config
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rc
+from functools import partial
 import os
 import torch
 import configparser
@@ -18,7 +19,11 @@ from src.utils.helper_functions import get_data, make_grid, NumpyLoader
 rc("font", **{"family": "serif", "serif": ["Computer Modern"]}, size=14)
 rc("text", usetex=True)
 
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.75"
+# os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.9"
+os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
+os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"] = "platform"
+os.environ["XLA_FLAGS"] = "--xla_gpu_strict_conv_algorithm_picker=false --xla_gpu_force_compilation_parallelism=1"
+
 print(f"Device: {jax.default_backend()}")
 key = jax.random.PRNGKey(0)
 
@@ -33,16 +38,20 @@ num_epochs = int(parser["PIPELINE"]["NUM_EPOCHS"])
 
 dataset, val_dataset = get_data(data_set_name)
 
-# Take a subset of the dataset
+# Take a subset of the dataset to ease computation
 train_data = torch.utils.data.Subset(dataset, range(num_train_data))
 val_data = torch.utils.data.Subset(val_dataset, range(num_val_data))
 
-# Extract all x for image comparisons
-all_val_x = np.array([val_data[i][0] for i in range(len(val_data))])
-
 # Split dataset
-test_loader = NumpyLoader(train_data, batch_size=batch_size, shuffle=True)
+train_loader = NumpyLoader(train_data, batch_size=batch_size, shuffle=True)
 val_loader = NumpyLoader(val_data, batch_size=batch_size, shuffle=False)
+
+# Stack into jnp array for scanning 
+train_x = np.stack([x for x, _ in train_loader])
+val_x = np.stack([x for x, _ in val_loader])
+
+# Extract all x for image comparisons
+image_real = np.array([val_data[i][0] for i in range(100)])
 
 key, EBM_params, EBM_fwd = init_EBM(key)
 key, GEN_params, GEN_fwd = init_GEN(key)
@@ -67,61 +76,62 @@ GEN_param_count = sum(x.size for x in jax.tree_util.tree_leaves(GEN_params))
 print(f"Number of parameters in generator: {GEN_param_count}")
 print(f"Number of parameters in EBM: {EBM_param_count}")
 
-jit_train_step = jax.jit(train_step, static_argnums=(4, 5))
-jit_val_step = jax.jit(val_step, static_argnums=3)
+# Preload the functions with immutable arguments
+loaded_train_step = partial(train_step, optimiser_tup=optimiser_tup, fwd_fcn_tup=fwd_fcn_tup, temp_schedule=temp_schedule)
+loaded_val_step = partial(val_step, fwd_fcn_tup=fwd_fcn_tup, temp_schedule=temp_schedule)
+loaded_generate = partial(generate, num_images=len(image_real), fwd_fcn_tup=fwd_fcn_tup)
+
+# Jit the functions
+jit_train_step = jax.jit(loaded_train_step)
+jit_val_step = jax.jit(loaded_val_step)
+jit_generate = jax.jit(loaded_generate)
+
+def train_batches(carry, x):
+    key, params_tup, opt_state_tup = carry
+    
+    key, params_tup, opt_state_tup, loss, var = jit_train_step(
+        key, x, params_tup, opt_state_tup
+    )
+    return (key, params_tup, opt_state_tup), (loss, var)
+
+def val_batches(carry, x, params_tup):
+    key = carry
+    
+    key, loss, var = jit_val_step(
+        key, x, params_tup
+    )
+    return (key), (loss, var)
 
 # Train the model
 tqdm_bar = tqdm.tqdm(range(num_epochs))
 for epoch in tqdm_bar:
 
-    epoch_loss = 0
-    epoch_grad_var = 0
+    # Train
+    (key, params_tup, opt_state_tup), (train_loss, train_grad_var) = jax.lax.scan(
+        f = train_batches, 
+        init = (key, params_tup, opt_state_tup), 
+        xs = train_x
+    )
 
-    batch_bar = tqdm.tqdm(test_loader, leave=False)
-    for x, _ in batch_bar:  # tqdm.tqdm(test_loader):
+    train_loss = train_loss.sum()
+    train_grad_var = train_grad_var.sum()
 
-        key, params_tup, opt_state_tup, batch_loss, batch_var = jit_train_step(
-            key, x, params_tup, opt_state_tup, optimiser_tup, fwd_fcn_tup, temp_schedule
-        )
+    # Validate 
+    key, (val_loss, val_grad_var) = jax.lax.scan(
+        f = partial(val_batches, params_tup=params_tup),
+        init = key,
+        xs = val_x
+    )
 
-        epoch_loss += batch_loss
-        epoch_grad_var += batch_var
+    val_loss = val_loss.sum()
+    val_grad_var = val_grad_var.sum()
 
-        batch_bar.set_postfix(
-            {
-                "Train Loss": batch_loss,
-                "Train Grad Var": batch_var,
-            }
-        )
+    # Profile generative capacity
+    key, fake_images = jit_generate(key, params_tup)
+    fid, mifid, kid = profile_image(image_real, fake_images)
 
-    val_loss = 0
-    val_grad_var = 0
-
-    batch_bar = tqdm.tqdm(val_loader, leave=False)
-    for x, _ in batch_bar:
-        key, batch_loss, batch_var = jit_val_step(
-            key, x, params_tup, fwd_fcn_tup, temp_schedule
-        )
-
-        val_loss += batch_loss
-        val_grad_var += batch_var
-
-        # Profile generative capacity
-        key, fake_images = generate(key, params_tup, len(val_data), fwd_fcn_tup)
-        fid, mifid, kid = profile_image(all_val_x, fake_images)
-
-        batch_bar.set_postfix(
-            {
-                "Val Loss": batch_loss,
-                "Val Grad Var": batch_var,
-                "FID": fid,
-                "MI-FID": mifid,
-                "KID": kid,
-            }
-        )
-
-    fake_grid = make_grid(fake_images[:4], n_row=2)
-    real_grid = make_grid(x[:4], n_row=2)
+    fake_grid = make_grid(np.random.choice(fake_images, 4, replace=False), n_row=2)
+    real_grid = make_grid(np.random.choice(image_real, 4, replace=False), n_row=2)
 
     fig, ax = plt.subplots(1, 2)
     ax[0].imshow(fake_grid)

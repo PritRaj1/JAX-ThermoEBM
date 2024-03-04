@@ -7,11 +7,11 @@ import jax
 parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")
 
-inception_model = InceptionV3(weights="imagenet", include_top=True, pooling="avg", input_shape=(75, 75, 3))
+inception_model = InceptionV3(weights="imagenet", include_top=True, pooling="avg")
 
 
 def preprocess_image(image):
-    image = resize(image, (75, 75, 3), method="bilinear")
+    image = resize(image, (229, 229, 3), method="bilinear")
     return image
 
 
