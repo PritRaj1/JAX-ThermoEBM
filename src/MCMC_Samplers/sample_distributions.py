@@ -17,12 +17,11 @@ prior_s = float(parser["MCMC"]["E_STEP_SIZE"])
 posterior_steps = int(parser["MCMC"]["G_SAMPLE_STEPS"])
 posterior_s = float(parser["MCMC"]["G_STEP_SIZE"])
 
-
 def sample_p0(key):
     """Sample from the noise prior distribution."""
 
     key, subkey = jax.random.split(key)
-    return key, p0_sig * jax.random.normal(subkey, (1, 1, z_channels))
+    return key, p0_sig * jax.random.normal(subkey, (batch_size, 1, 1, z_channels))
 
 
 def get_noise_step(key, num_steps, step_size, shape):

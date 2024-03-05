@@ -1,25 +1,38 @@
 import jax
+import jax.numpy as jnp
 from functools import partial
 from src.MCMC_Samplers.sample_distributions import sample_prior
+import configparser
 
-@partial(jax.jit, static_argnums=2)
-def generate_one(key, params_tup, fwd_fcn_tup):
-        """Generates a single image from the generator."""
-        key, z = sample_prior(key, params_tup[0], fwd_fcn_tup[0])
-        x_pred = fwd_fcn_tup[1](params_tup[1], jax.lax.stop_gradient(z))
+parser = configparser.ConfigParser()
+parser.read("hyperparams.ini")
 
-        return x_pred
+pl_sigma = float(parser["SIGMAS"]["LKHOOD_SIGMA"])
+batch_size = int(parser["PIPELINE"]["BATCH_SIZE"])
+image_dim = 64 if parser["PIPELINE"]["DATASET"] == "CelebA" else 32
 
-generate_batch = jax.vmap(generate_one, in_axes=(0, None, None))
 
-def generate(key, params_tup, num_images, fwd_fcn_tup):
-    """Generates multiple images from the generator."""
+@partial(jax.jit, static_argnums=3)
+def generate(key, _, params_tup, fwd_fcn_tup):
+    """Generate a batch image from the generator."""
 
-    # Create a batch of keys
-    key_batch = jax.random.split(key, num_images + 1)
-    key, sub_key_batch = key_batch[0], key_batch[1:]
+    key, z = sample_prior(key, params_tup[0], fwd_fcn_tup[0])
+    key, subkey = jax.random.split(key)
+    x_gen = fwd_fcn_tup[1](params_tup[1], z) + (
+        pl_sigma * jax.random.normal(subkey, (batch_size, image_dim, image_dim, 3))
+    )
 
-    # Generate 'num_images' samples
-    x_pred = generate_batch(sub_key_batch, params_tup, fwd_fcn_tup)
+    return key, x_gen
 
-    return key, x_pred
+
+def generate_images(key, params_tup, num_images, fwd_fcn_tup):
+    """Generates 'num_images' images from the generator."""
+
+    # The generator struggles with memory, so generate them in batches
+    scan_gen = partial(generate, params_tup=params_tup, fwd_fcn_tup=fwd_fcn_tup)
+    key, images = jax.lax.scan(
+        f=scan_gen, init=key, xs=None, length=num_images // batch_size
+    )
+    images = jnp.reshape(images, (-1, image_dim, image_dim, 3))
+
+    return key, images

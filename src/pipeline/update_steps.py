@@ -14,7 +14,7 @@ def get_losses_and_grads(key, x, params_tup, fwd_fcn_tup, temp_schedule):
 
         Args:
         - key: PRNG key
-        - x: one item from the dataset
+        - x: batch of data
         - params_tup: tuple of model parameters
         - fwd_fcn_tup: tuple of model forward passes
         - temp_schedule: temperature schedule
@@ -25,7 +25,7 @@ def get_losses_and_grads(key, x, params_tup, fwd_fcn_tup, temp_schedule):
         - loss_gen: GEN loss
         - grad_gen: GEN gradients
 
-    *Note: The same key is utilized to maintain consistency 
+    *Note: The same key is used for each loss to maintain consistency 
     in z_posterior across the two Thermodynamic Integration loops. 
     These loops are separated to circumvent the necessity of computing 
     a Jacobian when dealing with two output losses simultaneously.

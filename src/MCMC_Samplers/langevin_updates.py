@@ -1,5 +1,7 @@
 import configparser
+import jax
 import jax.numpy as jnp
+from functools import partial
 
 from src.MCMC_Samplers.grad_log_probs import prior_grad_log, posterior_grad_log
 
@@ -14,10 +16,10 @@ prior_s = float(parser["MCMC"]["E_STEP_SIZE"])
 posterior_steps = int(parser["MCMC"]["G_SAMPLE_STEPS"])
 posterior_s = float(parser["MCMC"]["G_STEP_SIZE"])
 
-
+@partial(jax.jit, static_argnums=3)
 def langevin_prior(z, noise, EBM_params, EBM_fwd):
     """
-    Prior langevin update
+    Prior langevin update. Jitted here because it is called outside the train loop.
 
     z_{i+1} = z_i - s * ∇_z( log[p_a(x)] ) + ϵ * √(2s)
     """

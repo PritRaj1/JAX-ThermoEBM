@@ -6,19 +6,24 @@ from sklearn.linear_model import LinearRegression
 
 from src.metrics.get_metrics import get_metrics
 from src.metrics.inception_network import extract_features
-from src.pipeline.generate import generate
+from src.pipeline.generate import generate_images
 
-def metrics_fcn(key, sample_size, num_features, x_activations, x_pred_activations):
+cb_type = {
+    "shape": (), 
+    "dtype": np.array
+}
+
+def metrics_fcn(key, sample_size, x_activations, x_pred_activations):
 
     # Build random subset
-    keys = jax.random.split(key, 3)
-    key, subkey1, subkey2 = keys
-    x_act_i = jax.random.choice(
-        subkey1, x_activations, (sample_size,), replace=True
+    key, subkey = jax.random.split(key)
+    sample_indices = jax.random.choice(
+        subkey, x_activations.shape[0], (2, sample_size), replace=False
     )
-    x_pred_act_i = jax.random.choice(
-        subkey2, x_pred_activations,  (sample_size,), replace=True
-    )
+    indices_real, indices_fake = sample_indices[0], sample_indices[1]
+
+    x_act_i = x_activations[indices_real]
+    x_pred_act_i = x_pred_activations[indices_fake]
 
     # Compute metrics
     fid, mifid, kid = get_metrics(x_act_i, x_pred_act_i)
@@ -56,7 +61,10 @@ def profile_generation(
 
     # Preload the generation and profile functions with immutable arguments
     gen_fcn = partial(
-        generate, params_tup=params_tup, num_images=max_samples, fwd_fcn_tup=fwd_fcn_tup
+        generate_images,
+        params_tup=params_tup,
+        num_images=max_samples,
+        fwd_fcn_tup=fwd_fcn_tup,
     )
 
     if max_samples > len(x):
@@ -73,18 +81,12 @@ def profile_generation(
     x_activations = extract_features(x)
     x_pred_activations = extract_features(x_pred)
 
-    loop_metrics = partial(
-        metrics_fcn,
-        num_features=x_activations.shape[-1],
-        x_activations=x_activations,
-        x_pred_activations=x_pred_activations,
-    )
-
-    fid, mifid, kid = np.zeros(num_points), np.zeros(num_points), np.zeros(num_points)
+    fid, mifid, kid = jnp.zeros(num_points), jnp.zeros(num_points), jnp.zeros(num_points)
 
     for idx, sample_size in enumerate(batch_sizes):
-        key, (fid_i, mifid_i, kid_i) = loop_metrics(key, sample_size)
-        fid[idx], mifid[idx], kid[idx] = fid_i, mifid_i, kid_i
+        key, (fid[idx], mifid[idx], kid[idx]) = metrics_fcn(
+            key, sample_size, x_activations, x_pred_activations
+        )
 
     # Fit a linear regression to the inverse of the batch sizes
     reg_fid = LinearRegression().fit(1 / batch_sizes.reshape(-1, 1), fid)

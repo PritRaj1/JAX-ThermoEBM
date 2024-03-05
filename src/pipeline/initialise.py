@@ -21,35 +21,33 @@ num_temps = int(parser["TEMP"]["NUM_TEMPS"])
 
 
 def init_EBM(key):
+
     key, z_init = sample_p0(key)
-
     EBM_model = EBM()
-
     EBM_params = EBM_model.init(key, z_init)
-
     GEN_fwd = EBM_model.apply
 
     return key, EBM_params, GEN_fwd
 
 
 def init_GEN(key):
+
     key, z_init = sample_p0(key)
-
     GEN_model = GEN()
-    
     GEN_params = GEN_model.init(key, z_init)
-
     GEN_fwd = GEN_model.apply
 
     return key, GEN_params, GEN_fwd
 
 def init_EBM_optimiser(EBM_params):
+
     E_optimiser = optax.adam(E_lr, b1=E_beta_1, b2=E_beta_2)
     E_opt_state = E_optimiser.init(EBM_params)
 
     return E_optimiser, E_opt_state
 
 def init_GEN_optimiser(GEN_params):
+
     GEN_optimiser = optax.adam(G_lr, b1=G_beta_1, b2=G_beta_2)
     GEN_opt_state = GEN_optimiser.init(GEN_params)
 
@@ -57,6 +55,7 @@ def init_GEN_optimiser(GEN_params):
 
 
 def init_temp_schedule():
+
     if temp_power >= 1:
         print("Using Temperature Schedule with Power: {}".format(temp_power))
         temp = jnp.linspace(0, 1, num_temps) ** temp_power
