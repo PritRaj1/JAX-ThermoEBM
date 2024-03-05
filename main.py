@@ -153,8 +153,8 @@ for epoch in tqdm_bar:
     ax[1].set_title("Real Images")
     ax[1].axis("off")
     plt.suptitle(f"Epoch: {epoch} \n\n"
-                 + r"$\bar{FID}_\infty$: " + f"{fid_inf:.2f}, "
-                    + r"$\bar{MI-FID}_\infty$: " + f"{mifid_inf:.2f}, "
-                    + r"$\bar{KID}_\infty$: " + f"{kid_inf:.2f}")
+                 + r"$\overline{FID}_\infty$: " + f"{fid_inf:.2f}, "
+                    + r"$\overline{MIFID}_\infty$: " + f"{mifid_inf:.2f}, "
+                    + r"$\overline{KID}_\infty$: " + f"{kid_inf:.2f}")
     plt.tight_layout()
     plt.savefig(f"images/{data_set_name}/{epoch}.png", dpi=500)

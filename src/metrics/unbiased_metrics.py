@@ -8,10 +8,8 @@ from src.metrics.get_metrics import get_metrics
 from src.metrics.inception_network import extract_features
 from src.pipeline.generate import generate_images
 
-cb_type = {
-    "shape": (), 
-    "dtype": np.array
-}
+cb_type = {"shape": (), "dtype": np.array}
+
 
 def metrics_fcn(key, sample_size, x_activations, x_pred_activations):
 
@@ -109,4 +107,4 @@ def profile_generation(
     four_real = np.array([x[i] for i in random_indices])
     four_fake = np.array([x_pred[i] for i in random_indices])
 
-    return key, fid_inf, mifid_inf, kid_inf, four_real, four_fake
+    return key, fid_inf, mifid_inf, kid_inf, four_fake, four_real

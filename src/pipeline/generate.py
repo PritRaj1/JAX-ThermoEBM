@@ -17,10 +17,7 @@ def generate(key, _, params_tup, fwd_fcn_tup):
     """Generate a batch image from the generator."""
 
     key, z = sample_prior(key, params_tup[0], fwd_fcn_tup[0])
-    key, subkey = jax.random.split(key)
-    x_gen = fwd_fcn_tup[1](params_tup[1], z) + (
-        pl_sigma * jax.random.normal(subkey, (batch_size, image_dim, image_dim, 3))
-    )
+    x_gen = fwd_fcn_tup[1](params_tup[1], z)
 
     return key, x_gen
 

@@ -7,7 +7,9 @@ import configparser
 parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")
 
-inception_model = InceptionV3(weights="imagenet", include_top=False, pooling="avg", input_shape=(75, 75, 3))
+inception_model = InceptionV3(
+    weights="imagenet", include_top=False, pooling="avg", input_shape=(75, 75, 3)
+)
 
 
 def extract_features(images):
