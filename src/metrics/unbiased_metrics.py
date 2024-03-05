@@ -18,7 +18,7 @@ def metrics_fcn(key, sample_size, x_activations, x_pred_activations):
     # Build random subset
     key, subkey = jax.random.split(key)
     sample_indices = jax.random.choice(
-        subkey, x_activations.shape[0], (2, sample_size), replace=False
+        subkey, x_activations.shape[0], (2, sample_size), replace=True
     )
     indices_real, indices_fake = sample_indices[0], sample_indices[1]
 
@@ -81,12 +81,18 @@ def profile_generation(
     x_activations = extract_features(x)
     x_pred_activations = extract_features(x_pred)
 
-    fid, mifid, kid = jnp.zeros(num_points), jnp.zeros(num_points), jnp.zeros(num_points)
+    fid = jnp.zeros(num_points)
+    mifid = jnp.zeros(num_points)
+    kid = jnp.zeros(num_points)
 
     for idx, sample_size in enumerate(batch_sizes):
-        key, (fid[idx], mifid[idx], kid[idx]) = metrics_fcn(
+        key, (fid_i, mifid_i, kid_i) = metrics_fcn(
             key, sample_size, x_activations, x_pred_activations
         )
+
+        fid = fid.at[idx].set(fid_i)
+        mifid = mifid.at[idx].set(mifid_i)
+        kid = kid.at[idx].set(kid_i)
 
     # Fit a linear regression to the inverse of the batch sizes
     reg_fid = LinearRegression().fit(1 / batch_sizes.reshape(-1, 1), fid)
@@ -94,9 +100,9 @@ def profile_generation(
     reg_kid = LinearRegression().fit(1 / batch_sizes.reshape(-1, 1), kid)
 
     # Interpolate to infinite sample size
-    fid_inf = reg_fid.predict(np.array([[0]]))[0, 0]
-    mifid_inf = reg_mifid.predict(np.array([[0]]))[0, 0]
-    kid_inf = reg_kid.predict(np.array([[0]]))[0, 0]
+    fid_inf = reg_fid.predict(np.array([[0]]))[0]
+    mifid_inf = reg_mifid.predict(np.array([[0]]))[0]
+    kid_inf = reg_kid.predict(np.array([[0]]))[0]
 
     # Return 4 random images for plotting (visual inspection)
     random_indices = np.random.choice(len(x_pred), num_plot, replace=False)

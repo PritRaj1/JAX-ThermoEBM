@@ -11,12 +11,12 @@ inception_model = InceptionV3(weights="imagenet", include_top=False, pooling="av
 
 
 def extract_features(images):
-    images = np.asarray(images)
+    images = np.asarray(images, dtype=np.float32)
     images = resize(images, (75, 75))
     features = np.zeros((images.shape[0], 2048))
 
     for idx, image in enumerate(images):
         image = np.expand_dims(image, axis=0)
-        features[idx] = np.asarray(inception_model(image))
+        features[idx] = np.asarray(inception_model(image), dtype=np.float32)
 
     return jnp.asarray(features)

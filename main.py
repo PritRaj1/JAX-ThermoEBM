@@ -18,9 +18,9 @@ from src.utils.helper_functions import get_data, make_grid, NumpyLoader
 rc("font", **{"family": "serif", "serif": ["Computer Modern"]}, size=12)
 rc("text", usetex=True)
 
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.75"
+os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.9"
 # os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
-# os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"] = "platform"
+os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"] = "platform"
 # os.environ["XLA_FLAGS"] = (
 #     "--xla_gpu_strict_conv_algorithm_picker=false --xla_gpu_force_compilation_parallelism=1"
 # )
@@ -50,7 +50,9 @@ val_data = torch.utils.data.Subset(val_dataset, range(num_val_data))
 # Split dataset
 train_loader = NumpyLoader(train_data, batch_size=batch_size, shuffle=True)
 val_loader = NumpyLoader(val_data, batch_size=batch_size, shuffle=False)
-val_x = np.stack([x for x, _ in val_loader]) # Stack into jnp array for scanning and metric comparisons
+val_x = np.stack(
+    [x for x, _ in val_loader]
+)  # Stack into jnp array for scanning and metric comparisons
 
 
 key, EBM_params, EBM_fwd = init_EBM(key)
@@ -92,13 +94,16 @@ jit_train_step = jax.jit(loaded_train_step)
 jit_val_step = jax.jit(loaded_val_step)
 
 # Preload the metric function
-metrics_fcn = partial(profile_generation,
-                        x=np.stack([x for x, _ in val_data]), # Send all val data
-                        fwd_fcn_tup=fwd_fcn_tup,
-                        min_samples=min_samples,
-                        max_samples=max_samples,
-                        num_points=num_points,
-                        num_plot=num_plot)
+metrics_fcn = partial(
+    profile_generation,
+    x=np.stack([x for x, _ in val_data]),  # Send all val data
+    fwd_fcn_tup=fwd_fcn_tup,
+    min_samples=min_samples,
+    max_samples=max_samples,
+    num_points=num_points,
+    num_plot=num_plot,
+)
+
 
 def val_batches(carry, x, params_tup):
     """Batch validation fcn for scanning."""
@@ -133,7 +138,9 @@ for epoch in tqdm_bar:
     val_grad_var = val_grad_var.sum()
 
     # Profile generative capacity using unbiased metrics
-    key, fid_inf, mifid_inf, kid_inf, four_fake, four_real = metrics_fcn(key, params_tup)
+    key, fid_inf, mifid_inf, kid_inf, four_fake, four_real = metrics_fcn(
+        key, params_tup
+    )
 
     fake_grid = make_grid(four_fake, n_row=2)
     real_grid = make_grid(four_real, n_row=2)

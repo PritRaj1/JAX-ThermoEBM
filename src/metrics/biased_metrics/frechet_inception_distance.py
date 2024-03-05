@@ -2,7 +2,7 @@ import jax.numpy as jnp
 from jax.scipy.linalg import cholesky
 
 
-def calculate_fid(real_features, fake_features, eps=1e-5):
+def calculate_fid(real_features, fake_features, eps=1e-4):
     """
     Frechet Inception Distance.
 
