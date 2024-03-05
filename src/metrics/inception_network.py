@@ -19,4 +19,4 @@ def extract_features(images):
         image = np.expand_dims(image, axis=0)
         features[idx] = np.asarray(inception_model(image), dtype=np.float32)
 
-    return jnp.asarray(features)
+    return jnp.asarray(features, dtype=jnp.float32)

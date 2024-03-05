@@ -152,10 +152,9 @@ for epoch in tqdm_bar:
     ax[1].imshow(real_grid)
     ax[1].set_title("Real Images")
     ax[1].axis("off")
-    plt.suptitle(
-        r"Epoch: {} \n\n $\bar{FID}_\infty$: {:.2f}, $\bar{MI-FID}_\infty$: {:.2f}, $\bar{KID}_\infty$: {:.2f}".format(
-            epoch, fid_inf, mifid_inf, kid_inf
-        )
-    )
+    plt.suptitle(f"Epoch: {epoch} \n\n"
+                 + r"$\bar{FID}_\infty$: " + f"{fid_inf:.2f}, "
+                    + r"$\bar{MI-FID}_\infty$: " + f"{mifid_inf:.2f}, "
+                    + r"$\bar{KID}_\infty$: " + f"{kid_inf:.2f}")
     plt.tight_layout()
     plt.savefig(f"images/{data_set_name}/{epoch}.png", dpi=500)

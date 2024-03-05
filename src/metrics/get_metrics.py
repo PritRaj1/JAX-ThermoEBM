@@ -3,6 +3,7 @@ import jax
 from src.metrics.biased_metrics.frechet_inception_distance import calculate_fid, calculate_mifid
 from src.metrics.biased_metrics.kernel_inception_distance import calculate_kid
 
+@jax.jit
 def get_metrics(x_features, x_pred_features):
 
     # Calculate the FID

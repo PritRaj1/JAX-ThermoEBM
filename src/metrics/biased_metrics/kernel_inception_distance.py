@@ -1,11 +1,14 @@
-from sklearn.metrics import pairwise_kernels
+
 import jax.numpy as jnp
 
-
 def kernel_matrix(x, y, gamma):
-    """Compute the kernel matrix."""
-    return pairwise_kernels(x, y, metric="rbf", gamma=gamma)
-
+    """Compute the rbf pairwise kernel matrix."""
+    
+    # Compute the pairwise squared Euclidean distances
+    pairwise_distances_sq = jnp.sum((x[:, None] - y[None, :])**2, axis=-1)
+    
+    # Compute the kernel matrix
+    return jnp.exp(-gamma * pairwise_distances_sq)
 
 def calculate_kid(x, y):
     """
