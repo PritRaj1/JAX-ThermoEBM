@@ -2,9 +2,10 @@
 torch
 torchvision
 torchmetrics
-jax[cuda11_pip]
+jax[cuda12_pip]
 flax[all]
 optax
+chex
 matplotlib
 tqdm
 seaborn

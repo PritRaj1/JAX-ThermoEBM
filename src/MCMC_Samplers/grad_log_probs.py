@@ -27,17 +27,13 @@ def log_llood_fcn(z, x, t, GEN_params, GEN_fwd):
     return log_lkhood
 
 ### Gradient functions for a single sample from the batch of z's ###
-def single_grad_ebm(z, EBM_params, EBM_fwd):
+def grad_ebm(z, EBM_params, EBM_fwd):
     return jax.grad(EBM_fcn, argnums=0)(z, EBM_params, EBM_fwd)
 
-def single_grad_llhood(z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
+def grad_llhood(z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     grad_log_llood = jax.grad(log_llood_fcn, argnums=0)(z, x, t, GEN_params, GEN_fwd)
     grad_prior = prior_grad_log(z, EBM_params, EBM_fwd)
     return grad_log_llood + grad_prior
-
-### Batched gradient functions ###
-batch_grad_ebm = jax.vmap(single_grad_ebm, in_axes=(0, None, None))
-batch_grad_llhood = jax.vmap(single_grad_llhood, in_axes=(0, 0, None, None, None, None, None))
 
 ### Grad log probs ###
 def prior_grad_log(z, EBM_params, EBM_fwd):
@@ -54,7 +50,7 @@ def prior_grad_log(z, EBM_params, EBM_fwd):
     - ∇_z( log[p_a(x)] )
     """
 
-    grad_f = batch_grad_ebm(z, EBM_params, EBM_fwd)
+    grad_f = grad_ebm(z, EBM_params, EBM_fwd)
 
     return grad_f - (z / (p0_sig**2))
 
@@ -77,7 +73,7 @@ def posterior_grad_log(z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     - ∇_z( log[p_θ(z | x)] ) ∝ ∇_z( log[p(x | z)^t * p(z)] )
     """
 
-    grad_log_llood = batch_grad_llhood(z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
+    grad_log_llood = grad_llhood(z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
     grad_prior = prior_grad_log(z, EBM_params, EBM_fwd)
 
     return grad_log_llood + grad_prior

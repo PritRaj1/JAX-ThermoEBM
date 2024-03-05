@@ -18,14 +18,16 @@ from src.utils.helper_functions import get_data, make_grid, NumpyLoader
 rc("font", **{"family": "serif", "serif": ["Computer Modern"]}, size=12)
 rc("text", usetex=True)
 
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.9"
+# os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.9"
 # os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
-os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"] = "platform"
+# os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"] = "platform"
 # os.environ["XLA_FLAGS"] = (
 #     "--xla_gpu_strict_conv_algorithm_picker=false --xla_gpu_force_compilation_parallelism=1"
 # )
 
-print(f"Device: {jax.default_backend()}")
+os.environ["XLA_FLAGS"]="--xla_gpu_force_compilation_parallelism=1"
+
+print(f"Device Count: {jax.device_count()}")
 key = jax.random.PRNGKey(0)
 
 parser = configparser.ConfigParser()
@@ -52,8 +54,8 @@ train_loader = NumpyLoader(train_data, batch_size=batch_size, shuffle=True)
 val_loader = NumpyLoader(val_data, batch_size=batch_size, shuffle=False)
 val_x = np.stack(
     [x for x, _ in val_loader]
-)  # Stack into jnp array for scanning and metric comparisons
-
+)
+del val_loader 
 
 key, EBM_params, EBM_fwd = init_EBM(key)
 key, GEN_params, GEN_fwd = init_GEN(key)
@@ -140,6 +142,13 @@ for epoch in tqdm_bar:
     # Profile generative capacity using unbiased metrics
     key, fid_inf, mifid_inf, kid_inf, four_fake, four_real = metrics_fcn(
         key, params_tup
+    )
+
+    tqdm_bar.set_postfix(
+        {
+            "Train Loss": train_loss,
+            "Val Loss": val_loss,
+        }
     )
 
     fake_grid = make_grid(four_fake, n_row=2)

@@ -9,7 +9,7 @@ parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")
 
 p0_sig = float(parser["SIGMAS"]["p0_SIGMA"])
-batch_size = int(parser["PIPELINE"]["BATCH_SIZE"])
+# batch_size = int(parser["PIPELINE"]["BATCH_SIZE"])
 z_channels = int(parser["EBM"]["Z_CHANNELS"])
 
 prior_steps = int(parser["MCMC"]["E_SAMPLE_STEPS"])
@@ -21,7 +21,7 @@ def sample_p0(key):
     """Sample from the noise prior distribution."""
 
     key, subkey = jax.random.split(key)
-    return key, p0_sig * jax.random.normal(subkey, (batch_size, 1, 1, z_channels))
+    return key, p0_sig * jax.random.normal(subkey, (1, 1, z_channels))
 
 
 def get_noise_step(key, num_steps, step_size, shape):

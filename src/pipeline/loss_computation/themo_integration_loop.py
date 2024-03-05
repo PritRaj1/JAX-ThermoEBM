@@ -21,7 +21,7 @@ def ebm_loss(z_prior, z_posterior, EBM_params, EBM_fwd):
     # Compute the energy of the prior sample
     en_neg = EBM_fwd(EBM_params, stop_gradient(z_prior)).mean()
 
-    return (en_pos - en_neg).sum()  # sum over the batch
+    return (en_pos - en_neg)
 
 
 def gen_loss(key, x, z, GEN_params, GEN_fwd):
@@ -34,10 +34,10 @@ def gen_loss(key, x, z, GEN_params, GEN_fwd):
     )
 
     # Compute -log[ p_β(x | z) ] = 1/2 * (x - g(z))^2 / σ^2
-    mse = jnp.mean(optax.l2_loss(x, x_pred), axis=(1, 2, 3))
+    mse = jnp.mean(optax.l2_loss(x, x_pred))
     log_lkhood = mse / (2.0 * pl_sig**2)
 
-    return key, log_lkhood.sum()
+    return key, log_lkhood
 
 
 def EBM_loop(carry, t, x, EBM_params, EBM_fwd, GEN_params, GEN_fwd):
