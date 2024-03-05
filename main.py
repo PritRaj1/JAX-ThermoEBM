@@ -146,11 +146,11 @@ for epoch in tqdm_bar:
     real_grid = make_grid(four_real, n_row=2)
 
     fig, ax = plt.subplots(1, 2)
-    ax[0].imshow(fake_grid)
-    ax[0].set_title("Generated Images")
+    ax[0].imshow(real_grid)
+    ax[0].set_title("Real Images")
     ax[0].axis("off")
-    ax[1].imshow(real_grid)
-    ax[1].set_title("Real Images")
+    ax[1].imshow(fake_grid)
+    ax[1].set_title("Generated Images")
     ax[1].axis("off")
     plt.suptitle(f"Epoch: {epoch} \n\n"
                  + r"$\overline{FID}_\infty$: " + f"{fid_inf:.2f}, "
