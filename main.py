@@ -41,7 +41,7 @@ val_loader = NumpyLoader(val_data, batch_size=batch_size, shuffle=False)
 val_x = np.stack([x for x, _ in val_loader])
 del val_loader 
 
-log_path = f"logs/{data_set_name}/{temp_power}"
+log_path = f"logs/{data_set_name}/p={temp_power}"
 os.makedirs(f"{log_path}/images", exist_ok=True)
 
 for exp in tqdm.tqdm(range(num_exp)):

@@ -18,7 +18,6 @@ parser.read("hyperparams.ini")
 
 save_every = int(parser["PIPELINE"]["SAVE_EVERY"])
 num_epochs = int(parser["PIPELINE"]["NUM_EPOCHS"])
-
 min_samples = int(parser["GENERATION_EVAL"]["MIN_SAMPLES"])
 max_samples = int(parser["GENERATION_EVAL"]["MAX_SAMPLES"])
 num_points = int(parser["GENERATION_EVAL"]["NUM_POINTS"])
@@ -28,7 +27,7 @@ num_plot = int(parser["GENERATION_EVAL"]["NUM_PLOT"])
 def run_experiment(exp_num, train_loader, val_x, log_path):
 
     # Initialise the pipeline
-    key = jax.random.PRNGKey(0)
+    key = jax.random.PRNGKey(exp_num)
     key, EBM_params, EBM_fwd = init_EBM(key)
     key, GEN_params, GEN_fwd = init_GEN(key)
     EBM_optimiser, EBM_opt_state = init_EBM_optimiser(EBM_params)
@@ -59,7 +58,7 @@ def run_experiment(exp_num, train_loader, val_x, log_path):
     # Preload the metric function
     metrics_fcn = partial(
         profile_generation,
-        x=val_x,
+        x=val_x.reshape(-1 , val_x.shape[-3], val_x.shape[-2], val_x.shape[-1]), # Flatten batches
         fwd_fcn_tup=fwd_fcn_tup,
         min_samples=min_samples,
         max_samples=max_samples,
@@ -73,7 +72,7 @@ def run_experiment(exp_num, train_loader, val_x, log_path):
         key, loss, var = jit_val_step(key, x, params_tup)
         return (key), (loss, var)
 
-    img_evolution = np.zeros((num_epochs // save_every, 64, 64, 3))
+    img_evolution = np.zeros((num_epochs // save_every, val_x.shape[-3], val_x.shape[-2], val_x.shape[-1]))
 
     df = pd.DataFrame(
         columns=[
@@ -165,3 +164,16 @@ def run_experiment(exp_num, train_loader, val_x, log_path):
 
     with pd.ExcelWriter(f"{log_path}/metrics.xlsx") as writer:
         df.to_excel(writer, sheet_name=f"Experiment_{exp_num}", index=False)
+        print(f"Experiment {exp_num} complete.")
+    
+    # Clean up
+    del params_tup
+    del fwd_fcn_tup
+    del optimiser_tup
+    del opt_state_tup
+    del loaded_train_step
+    del loaded_val_step
+    del jit_train_step
+    del jit_val_step
+    del metrics_fcn
+
