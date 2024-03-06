@@ -9,7 +9,6 @@ parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")
 
 p0_sig = float(parser["SIGMAS"]["p0_SIGMA"])
-# batch_size = int(parser["PIPELINE"]["BATCH_SIZE"])
 z_channels = int(parser["EBM"]["Z_CHANNELS"])
 
 prior_steps = int(parser["MCMC"]["E_SAMPLE_STEPS"])

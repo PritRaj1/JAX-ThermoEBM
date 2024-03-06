@@ -36,6 +36,7 @@ parser.read("hyperparams.ini")
 data_set_name = parser["PIPELINE"]["DATASET"]
 num_train_data = int(parser["PIPELINE"]["NUM_TRAIN_DATA"])
 num_val_data = int(parser["PIPELINE"]["NUM_VAL_DATA"])
+save_every = int(parser["PIPELINE"]["SAVE_EVERY"])
 batch_size = int(parser["PIPELINE"]["BATCH_SIZE"])
 num_epochs = int(parser["PIPELINE"]["NUM_EPOCHS"])
 min_samples = int(parser["GENERATION_EVAL"]["MIN_SAMPLES"])
@@ -71,8 +72,7 @@ optimiser_tup = (EBM_optimiser, GEN_optimiser)
 opt_state_tup = (EBM_opt_state, GEN_opt_state)
 
 log_path = f"logs/{data_set_name}/{temp_schedule[0]}"
-os.makedirs(f"images/{data_set_name}", exist_ok=True)
-os.makedirs("logs", exist_ok=True)
+os.makedirs(f"{log_path}/images", exist_ok=True)
 
 # Output number of parameters of generator
 EBM_param_count = sum(x.size for x in jax.tree_util.tree_leaves(EBM_params))
@@ -115,6 +115,7 @@ def val_batches(carry, x, params_tup):
 
 
 tqdm_bar = tqdm.tqdm(range(num_epochs))
+img_evolution = np.zeros((num_epochs // save_every, 64, 64, 3))
 for epoch in tqdm_bar:
 
     # Train - cannot scan due to large param count, default to for loop
@@ -151,19 +152,35 @@ for epoch in tqdm_bar:
         }
     )
 
-    fake_grid = make_grid(four_fake, n_row=2)
-    real_grid = make_grid(four_real, n_row=2)
+    if epoch % save_every == 0:
+        fake_grid = make_grid(four_fake, n_row=2)
+        real_grid = make_grid(four_real, n_row=2)
 
-    fig, ax = plt.subplots(1, 2)
-    ax[0].imshow(real_grid)
-    ax[0].set_title("Real Images")
-    ax[0].axis("off")
-    ax[1].imshow(fake_grid)
-    ax[1].set_title("Generated Images")
-    ax[1].axis("off")
-    plt.suptitle(f"Epoch: {epoch} \n\n"
-                 + r"$\overline{FID}_\infty$: " + f"{fid_inf:.2f}, "
-                    + r"$\overline{MIFID}_\infty$: " + f"{mifid_inf:.2f}, "
-                    + r"$\overline{KID}_\infty$: " + f"{kid_inf:.2f}")
-    plt.tight_layout()
-    plt.savefig(f"images/{data_set_name}/{epoch}.png", dpi=500)
+        fig, ax = plt.subplots(1, 2)
+        ax[0].imshow(real_grid)
+        ax[0].set_title("Real Images")
+        ax[0].axis("off")
+        ax[1].imshow(fake_grid)
+        ax[1].set_title("Generated Images")
+        ax[1].axis("off")
+        plt.suptitle(f"Epoch: {epoch} \n\n"
+                    + r"$\overline{FID}_\infty$: " + f"{fid_inf:.2f}, "
+                        + r"$\overline{MIFID}_\infty$: " + f"{mifid_inf:.2f}, "
+                        + r"$\overline{KID}_\infty$: " + f"{kid_inf:.2f}")
+        plt.tight_layout()
+        plt.savefig(f"{log_path}/images/{epoch}.png", dpi=750)
+
+        img_evolution[epoch // save_every] = four_fake[0]
+    
+evol_grid = make_grid(img_evolution, n_row=1)
+plt.figure()
+plt.imshow(evol_grid)
+plt.axis("off")
+plt.title("Evolution of Generated Images")
+plt.tight_layout()
+plt.savefig(f"{log_path}/images/evolution.png", dpi=750)
+
+
+
+
+    

@@ -14,8 +14,8 @@ batch_compute = jax.vmap(get_losses_and_grads, in_axes=(0, 0, None, None, None))
 def train_step(
     key, x, params_tup, opt_state_tup, optimiser_tup, fwd_fcn_tup, temp_schedule
 ):
-    
-    # Compute loss of both models
+
+    # Compute loss and grad of each batch
     key_batch = jax.random.split(key, batch_size + 1)
     key, subkey_batch = key_batch[0], key_batch[1:]
     batch_loss_e, batch_grad_e, batch_loss_g, batch_grad_g = batch_compute(
@@ -35,14 +35,12 @@ def train_step(
     total_loss = batch_loss_e.sum() + batch_loss_g.sum()  # L_e + L_g
     grad_var = get_grad_var(*grad_list)
 
-    # print(f"Total Loss: {total_loss}, Grad Var: {grad_var}")
-
     return key, params_tup, opt_state_tup, total_loss, grad_var
 
 
 def val_step(key, x, params_tup, fwd_fcn_tup, temp_schedule):
 
-    # Compute loss of both models
+    # Compute loss of each batch
     key_batch = jax.random.split(key, batch_size + 1)
     key, subkey_batch = key_batch[0], key_batch[1:]
     batch_loss_e, batch_grad_e, batch_loss_g, batch_grad_g = batch_compute(
