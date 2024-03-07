@@ -90,6 +90,8 @@ def run_experiment(exp_num, train_loader, val_x, log_path):
             "KID_inf",
         ]
     )
+    df.to_csv(f"{log_path}/experiment{exp_num}.csv", index=False)
+    del df
 
     for epoch in range(num_epochs):
 
@@ -117,6 +119,8 @@ def run_experiment(exp_num, train_loader, val_x, log_path):
             key, params_tup
         )
 
+        print(f"Experiment: {exp_num}, Epoch: {epoch}, Train Loss: {train_loss:.2f}, Val Loss: {val_loss:.2f}")
+
         # Save to dataframe
         epoch_df = pd.DataFrame(
             {
@@ -132,7 +136,7 @@ def run_experiment(exp_num, train_loader, val_x, log_path):
             index=[0],
         )
 
-        df = pd.concat([df if not df.empty else None, epoch_df], ignore_index=True)
+        epoch_df.to_csv(f"{log_path}/experiment{exp_num}.csv", mode="a", header=False, index=False)
 
         if epoch % save_every == 0 and exp_num == 0:
             fake_grid = make_grid(four_fake, n_row=2)
@@ -167,10 +171,6 @@ def run_experiment(exp_num, train_loader, val_x, log_path):
         plt.title("Evolution of Generated Images")
         plt.tight_layout()
         plt.savefig(f"{log_path}/images/evolution.png", dpi=750)
-
-    with pd.ExcelWriter(f"{log_path}/metrics.xlsx") as writer:
-        df.to_excel(writer, sheet_name=f"Experiment_{exp_num}", index=False)
-        print(f"Experiment {exp_num} complete.")
 
     # Clean up
     del params_tup
