@@ -3,6 +3,7 @@ from matplotlib import rc
 from functools import partial
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
 
 from src.pipeline.initialise import *
 from src.pipeline.batch_steps import train_step, val_step
@@ -98,7 +99,8 @@ def run_experiment(exp_num, train_loader, val_x, log_path):
         # Train - cannot scan due to large param count, default to for loop
         train_loss = 0
         train_grad_var = 0
-        for x, _ in train_loader:
+        tqdm_bar = tqdm(train_loader)
+        for x, _ in tqdm_bar:
             key, params_tup, opt_state_tup, train_loss, train_grad_var = jit_train_step(
                 key, x, params_tup, opt_state_tup
             )
@@ -119,8 +121,19 @@ def run_experiment(exp_num, train_loader, val_x, log_path):
             key, params_tup
         )
 
-        print(f"Experiment: {exp_num}, Epoch: {epoch}, Train Loss: {train_loss:.2f}, Val Loss: {val_loss:.2f}")
-
+        # Include tqdm to monitor runs if required
+        tqdm_bar.set_postfix(
+            {
+                "Train Loss": train_loss,
+                "Train Grad Var": train_grad_var,
+                "Val Loss": val_loss,
+                "Val Grad Var": val_grad_var,
+                "FID_inf": fid_inf,
+                "MIFID_inf": mifid_inf,
+                "KID_inf": kid_inf,
+            }
+        )
+        
         # Save to dataframe
         epoch_df = pd.DataFrame(
             {
