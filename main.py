@@ -38,12 +38,13 @@ val_data = torch.utils.data.Subset(val_dataset, range(num_val_data))
 # Split dataset
 train_loader = NumpyLoader(train_data, batch_size=batch_size, shuffle=True)
 val_loader = NumpyLoader(val_data, batch_size=batch_size, shuffle=False)
+train_x = np.stack([x for x, _ in train_loader])
 val_x = np.stack([x for x, _ in val_loader])
-del val_loader 
+del val_loader, train_loader, train_data, val_data
 
 log_path = f"logs/{data_set_name}/p={temp_power}/batch={batch_size}"
 os.makedirs(f"{log_path}/images", exist_ok=True)
 
 for exp in tqdm.tqdm(range(num_exp)):
-    run_experiment(exp, train_loader, val_x, log_path)
+    run_experiment(exp, train_x, val_x, log_path)
 

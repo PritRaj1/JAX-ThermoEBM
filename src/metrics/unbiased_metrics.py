@@ -2,7 +2,6 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from functools import partial
-from sklearn.linear_model import LinearRegression
 
 from src.metrics.get_metrics import get_metrics
 from src.metrics.inception_network import extract_features
@@ -11,17 +10,19 @@ from src.pipeline.generate import generate_images
 cb_type = {"shape": (), "dtype": np.array}
 
 
+def subsample_callback(x, size):
+    return x[:size]
+
 def metrics_fcn(key, sample_size, x_activations, x_pred_activations):
 
     # Build random subset
     key, subkey = jax.random.split(key)
-    sample_indices = jax.random.choice(
-        subkey, x_activations.shape[0], (2, sample_size), replace=True
-    )
-    indices_real, indices_fake = sample_indices[0], sample_indices[1]
-
-    x_act_i = x_activations[indices_real]
-    x_pred_act_i = x_pred_activations[indices_fake]
+    x_act_i = jax.random.permutation(subkey, x_activations)
+    x_pred_act_i = jax.random.permutation(subkey, x_pred_activations)   
+    
+    shape = jax.core.ShapedArray((sample_size, x_act_i.shape[-1]), x_act_i.dtype)
+    x_act_i = jax.pure_callback(subsample_callback, shape, x_act_i, sample_size)
+    x_pred_act_i = jax.pure_callback(subsample_callback, shape, x_pred_act_i, sample_size)
 
     # Compute metrics
     fid, mifid, kid = get_metrics(x_act_i, x_pred_act_i)
@@ -69,42 +70,35 @@ def profile_generation(
         raise ValueError("Max samples cannot exceed the number of test images.")
     elif min_samples > max_samples:
         raise ValueError("Min samples cannot exceed max samples.")
-
-    batch_sizes = jnp.linspace(min_samples, max_samples, num_points, dtype=int)
-
+    
     # Generate the maximum number of samples
     key, x_pred = gen_fcn(key)
 
     # Get all activations
     x_activations = extract_features(x)
     x_pred_activations = extract_features(x_pred)
+    loaded_metrics = partial(metrics_fcn, x_activations=x_activations, x_pred_activations=x_pred_activations)
 
     fid = jnp.zeros(num_points)
     mifid = jnp.zeros(num_points)
     kid = jnp.zeros(num_points)
 
+    # Compute image metrics for each batch size
+    batch_sizes = np.linspace(min_samples, max_samples, num_points).astype(int)
     for idx, sample_size in enumerate(batch_sizes):
-        key, (fid_i, mifid_i, kid_i) = metrics_fcn(
-            key, sample_size, x_activations, x_pred_activations
-        )
-
+        key, (fid_i, mifid_i, kid_i) = loaded_metrics(key, sample_size)
         fid = fid.at[idx].set(fid_i)
         mifid = mifid.at[idx].set(mifid_i)
         kid = kid.at[idx].set(kid_i)
 
-    # Fit a linear regression to the inverse of the batch sizes
-    reg_fid = LinearRegression().fit(1 / batch_sizes.reshape(-1, 1), fid)
-    reg_mifid = LinearRegression().fit(1 / batch_sizes.reshape(-1, 1), mifid)
-    reg_kid = LinearRegression().fit(1 / batch_sizes.reshape(-1, 1), kid)
-
-    # Interpolate to infinite sample size
-    fid_inf = reg_fid.predict(np.array([[0]]))[0]
-    mifid_inf = reg_mifid.predict(np.array([[0]]))[0]
-    kid_inf = reg_kid.predict(np.array([[0]]))[0]
+    # Intepolate to infinite sample size by fitting a line and taking the intercept at 1/N = 0
+    _, fid_inf = jnp.polyfit(1 / batch_sizes, fid, 1)
+    _, mifid_inf = jnp.polyfit(1 / batch_sizes, mifid, 1)
+    _, kid_inf = jnp.polyfit(1 / batch_sizes, kid, 1)
 
     # Return 4 random images for plotting (visual inspection)
-    random_indices = np.random.choice(len(x_pred), num_plot, replace=False)
-    four_real = np.array([x[i] for i in random_indices])
-    four_fake = np.array([x_pred[i] for i in random_indices])
+    key, subkey = jax.random.split(key)
+    real = jax.random.permutation(subkey, x)[:num_plot]
+    fake = jax.random.permutation(subkey, x_pred)[:num_plot]
 
-    return key, fid_inf, mifid_inf, kid_inf, four_fake, four_real
+    return key, fid_inf, mifid_inf, kid_inf, real, fake

@@ -25,7 +25,7 @@ num_points = int(parser["GENERATION_EVAL"]["NUM_POINTS"])
 num_plot = int(parser["GENERATION_EVAL"]["NUM_PLOT"])
 
 
-def run_experiment(exp_num, train_loader, val_x, log_path):
+def run_experiment(exp_num, train_x, val_x, log_path):
 
     # Initialise the pipeline
     key = jax.random.PRNGKey(exp_num)
@@ -40,6 +40,7 @@ def run_experiment(exp_num, train_loader, val_x, log_path):
     fwd_fcn_tup = (EBM_fwd, GEN_fwd)
     optimiser_tup = (EBM_optimiser, GEN_optimiser)
     opt_state_tup = (EBM_opt_state, GEN_opt_state)
+    del EBM_params, GEN_params, EBM_fwd, GEN_fwd, EBM_optimiser, GEN_optimiser, EBM_opt_state, GEN_opt_state
 
     # Preload the pipeline functions with immutable arguments
     loaded_train_step = partial(
@@ -52,11 +53,6 @@ def run_experiment(exp_num, train_loader, val_x, log_path):
         val_step, fwd_fcn_tup=fwd_fcn_tup, temp_schedule=temp_schedule
     )
 
-    # Jit the pipeline functions
-    jit_train_step = jax.jit(loaded_train_step)
-    jit_val_step = jax.jit(loaded_val_step)
-
-    # Preload the metric function
     metrics_fcn = partial(
         profile_generation,
         x=val_x.reshape(
@@ -69,6 +65,21 @@ def run_experiment(exp_num, train_loader, val_x, log_path):
         num_plot=num_plot,
     )
 
+    # Jit the pipeline functions
+    jit_train_step = jax.jit(loaded_train_step)
+    jit_val_step = jax.jit(loaded_val_step)
+    jit_metrics_fcn = jax.jit(metrics_fcn)
+
+    @jax.jit
+    def train_batches(carry, x):
+        """Batch training fcn for scanning."""
+        key, params_tup, opt_state_tup = carry
+        key, params_tup, opt_state_tup, loss, var = jit_train_step(
+            key, x, params_tup, opt_state_tup
+        )
+        return (key, params_tup, opt_state_tup), (loss, var)
+
+    @jax.jit
     def val_batches(carry, x, params_tup):
         """Batch validation fcn for scanning."""
         key = carry
@@ -96,17 +107,15 @@ def run_experiment(exp_num, train_loader, val_x, log_path):
 
     for epoch in range(num_epochs):
 
-        # Train - cannot scan due to large param count, default to for loop
-        train_loss = 0
-        train_grad_var = 0
-        tqdm_bar = tqdm(train_loader)
-        for x, _ in tqdm_bar:
-            key, params_tup, opt_state_tup, train_loss, train_grad_var = jit_train_step(
-                key, x, params_tup, opt_state_tup
-            )
+        # Train
+        (key, params_tup, opt_state_tup), (train_loss, train_grad_var) = jax.lax.scan(
+            f=train_batches, init=(key, params_tup, opt_state_tup), xs=train_x
+        )
 
-            train_loss += train_loss
-            train_grad_var += train_grad_var
+        train_loss = train_loss.sum()
+        train_grad_var = train_grad_var.sum()
+
+        print(f"Epoch {epoch}, Train Loss: {train_loss}")
 
         # Validate
         key, (val_loss, val_grad_var) = jax.lax.scan(
@@ -116,24 +125,13 @@ def run_experiment(exp_num, train_loader, val_x, log_path):
         val_loss = val_loss.sum()
         val_grad_var = val_grad_var.sum()
 
-        # Profile generative capacity using unbiased metrics
-        key, fid_inf, mifid_inf, kid_inf, four_fake, four_real = metrics_fcn(
-            key, params_tup
-        )
+        print(f"Epoch {epoch}, Val Loss: {val_loss}")
 
-        # Include tqdm to monitor runs if required
-        tqdm_bar.set_postfix(
-            {
-                "Train Loss": train_loss,
-                "Train Grad Var": train_grad_var,
-                "Val Loss": val_loss,
-                "Val Grad Var": val_grad_var,
-                "FID_inf": fid_inf,
-                "MIFID_inf": mifid_inf,
-                "KID_inf": kid_inf,
-            }
-        )
+        # Profile generative capacity using unbiased metrics
+        key, fid_inf, mifid_inf, kid_inf, four_real, four_fake = jit_metrics_fcn(key, params_tup)
         
+        print(f"Epoch {epoch}, FID_inf: {fid_inf}, MIFID_inf: {mifid_inf}, KID_inf: {kid_inf}")
+
         # Save to dataframe
         epoch_df = pd.DataFrame(
             {

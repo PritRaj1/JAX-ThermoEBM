@@ -1,6 +1,7 @@
-from tensorflow.image import resize
 from tensorflow.keras.applications import InceptionV3
-import jax.numpy as jnp
+import jax
+from jax.image import resize
+from functools import partial
 import numpy as np
 import configparser
 
@@ -12,13 +13,17 @@ inception_model = InceptionV3(
 )
 
 
+def inception_pass_callback(x):
+    x = np.expand_dims(x, axis=0)
+    return inception_model(x)[0]
+
+def fwd_pass(carry, images, result_shape):
+    return carry, jax.pure_callback(inception_pass_callback, result_shape, images, vectorized=False)
+
 def extract_features(images):
-    images = np.asarray(images, dtype=np.float32)
-    images = resize(images, (75, 75))
-    features = np.zeros((images.shape[0], 2048))
 
-    for idx, image in enumerate(images):
-        image = np.expand_dims(image, axis=0)
-        features[idx] = np.asarray(inception_model(image), dtype=np.float32)
+    images = resize(images, (images.shape[0], 75, 75, 3), method="bilinear")
+    scan_images = partial(fwd_pass, result_shape=jax.core.ShapedArray((2048,), images.dtype)) 
+    _, features = jax.lax.scan(f=scan_images, init=None, xs=images)
 
-    return jnp.asarray(features, dtype=jnp.float32)
+    return features

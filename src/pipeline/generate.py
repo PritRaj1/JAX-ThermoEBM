@@ -11,7 +11,6 @@ pl_sigma = float(parser["SIGMAS"]["LKHOOD_SIGMA"])
 batch_size = int(parser["PIPELINE"]["BATCH_SIZE"])
 image_dim = 64 if parser["PIPELINE"]["DATASET"] == "CelebA" else 32
 
-@partial(jax.jit, static_argnums=3)
 def generate(key, _, params_tup, fwd_fcn_tup):
     """Generate a batch image from the generator."""
 
@@ -22,6 +21,7 @@ def generate(key, _, params_tup, fwd_fcn_tup):
 
 batch_generate = jax.vmap(generate, in_axes=(0, None, None, None))
 
+@partial(jax.jit, static_argnums=(2, 3))
 def generate_images(key, params_tup, num_images, fwd_fcn_tup):
     """Generates 'num_images' images from the generator."""
 
