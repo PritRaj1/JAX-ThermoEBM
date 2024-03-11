@@ -7,22 +7,23 @@ from src.metrics.get_metrics import get_metrics
 from src.metrics.inception_network import extract_features
 from src.pipeline.generate import generate_images
 
-cb_type = {"shape": (), "dtype": np.array}
-
-
-def subsample_callback(x, size):
-    return x[:size]
 
 def metrics_fcn(key, sample_size, x_activations, x_pred_activations):
 
     # Build random subset
     key, subkey = jax.random.split(key)
-    x_act_i = jax.random.permutation(subkey, x_activations)
-    x_pred_act_i = jax.random.permutation(subkey, x_pred_activations)   
-    
-    shape = jax.core.ShapedArray((sample_size, x_act_i.shape[-1]), x_act_i.dtype)
-    x_act_i = jax.pure_callback(subsample_callback, shape, x_act_i, sample_size)
-    x_pred_act_i = jax.pure_callback(subsample_callback, shape, x_pred_act_i, sample_size)
+    x_act_i = jax.random.choice(
+        subkey,
+        x_activations,
+        shape=(sample_size,),
+        replace=True,
+    )
+    x_pred_act_i = jax.random.choice(
+        subkey,
+        x_pred_activations,
+        shape=(sample_size,),
+        replace=True,
+    )
 
     # Compute metrics
     fid, mifid, kid = get_metrics(x_act_i, x_pred_act_i)
@@ -70,14 +71,16 @@ def profile_generation(
         raise ValueError("Max samples cannot exceed the number of test images.")
     elif min_samples > max_samples:
         raise ValueError("Min samples cannot exceed max samples.")
-    
+
     # Generate the maximum number of samples
     key, x_pred = gen_fcn(key)
 
     # Get all activations
     x_activations = extract_features(x)
     x_pred_activations = extract_features(x_pred)
-    loaded_metrics = partial(metrics_fcn, x_activations=x_activations, x_pred_activations=x_pred_activations)
+    loaded_metrics = partial(
+        metrics_fcn, x_activations=x_activations, x_pred_activations=x_pred_activations
+    )
 
     fid = jnp.zeros(num_points)
     mifid = jnp.zeros(num_points)
@@ -98,7 +101,7 @@ def profile_generation(
 
     # Return 4 random images for plotting (visual inspection)
     key, subkey = jax.random.split(key)
-    real = jax.random.permutation(subkey, x)[:num_plot]
-    fake = jax.random.permutation(subkey, x_pred)[:num_plot]
+    real = jax.random.choice(subkey, x, shape=(num_plot,), replace=False)
+    fake = jax.random.choice(subkey, x_pred, shape=(num_plot,), replace=False)
 
     return key, fid_inf, mifid_inf, kid_inf, real, fake

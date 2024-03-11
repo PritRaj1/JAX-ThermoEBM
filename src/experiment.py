@@ -115,8 +115,6 @@ def run_experiment(exp_num, train_x, val_x, log_path):
         train_loss = train_loss.sum()
         train_grad_var = train_grad_var.sum()
 
-        print(f"Epoch {epoch}, Train Loss: {train_loss}")
-
         # Validate
         key, (val_loss, val_grad_var) = jax.lax.scan(
             f=partial(val_batches, params_tup=params_tup), init=key, xs=val_x
@@ -125,13 +123,9 @@ def run_experiment(exp_num, train_x, val_x, log_path):
         val_loss = val_loss.sum()
         val_grad_var = val_grad_var.sum()
 
-        print(f"Epoch {epoch}, Val Loss: {val_loss}")
-
         # Profile generative capacity using unbiased metrics
         key, fid_inf, mifid_inf, kid_inf, four_real, four_fake = jit_metrics_fcn(key, params_tup)
         
-        print(f"Epoch {epoch}, FID_inf: {fid_inf}, MIFID_inf: {mifid_inf}, KID_inf: {kid_inf}")
-
         # Save to dataframe
         epoch_df = pd.DataFrame(
             {
