@@ -1,6 +1,7 @@
 from src.metrics.inception_network.inception import InceptionV3
 import jax
 import jax.numpy as jnp
+from jax.image import resize
 from functools import partial
 import configparser
 
@@ -11,10 +12,11 @@ batch_size = int(parser["PIPELINE"]["BATCH_SIZE"])
 
 init_rng = jax.random.PRNGKey(0)
 model = InceptionV3(pretrained=True)
-params = model.init(init_rng, jnp.ones((1, image_dim, image_dim, 3)))
+params = model.init(init_rng, jnp.ones((1, 256, 256, 3)))
 apply_fn = jax.jit(partial(model.apply, train=False))
 
 def inception_pass(images):
+    images = resize(images, (256, 256, 3), method="bilinear")
     images = jnp.expand_dims(images, 0)
     features = apply_fn(params, images)
     return features.squeeze()   

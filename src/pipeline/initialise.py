@@ -16,8 +16,6 @@ E_beta_1 = float(parser["OPTIMIZER"]["E_BETA_1"])
 G_beta_1 = float(parser["OPTIMIZER"]["G_BETA_1"])
 E_beta_2 = float(parser["OPTIMIZER"]["E_BETA_2"])
 G_beta_2 = float(parser["OPTIMIZER"]["G_BETA_2"])
-E_gamma = float(parser["OPTIMIZER"]["E_GAMMA"])
-G_gamma = float(parser["OPTIMIZER"]["G_GAMMA"])
 temp_power = float(parser["TEMP"]["TEMP_POWER"])
 num_temps = int(parser["TEMP"]["NUM_TEMPS"])
 
@@ -47,8 +45,7 @@ def init_GEN(key):
 def init_EBM_optimiser(EBM_params):
     """Initialise the EBM optimiser and its state."""
 
-    schedule = optax.exponential_decay(E_lr, 10, E_gamma)
-    E_optimiser = optax.adam(schedule, b1=E_beta_1, b2=E_beta_2)
+    E_optimiser = optax.adam(E_lr, b1=E_beta_1, b2=E_beta_2)
     E_opt_state = E_optimiser.init(EBM_params)
 
     return E_optimiser, E_opt_state
@@ -57,8 +54,7 @@ def init_EBM_optimiser(EBM_params):
 def init_GEN_optimiser(GEN_params):
     """Initialise the GEN optimiser and its state."""
 
-    schedule = optax.exponential_decay(G_lr, 10, G_gamma)
-    GEN_optimiser = optax.adam(schedule, b1=G_beta_1, b2=G_beta_2)
+    GEN_optimiser = optax.adam(G_lr, b1=G_beta_1, b2=G_beta_2)
     GEN_opt_state = GEN_optimiser.init(GEN_params)
 
     return GEN_optimiser, GEN_opt_state

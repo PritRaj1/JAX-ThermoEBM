@@ -7,10 +7,5 @@ flax[all]
 optax
 chex
 matplotlib
-tqdm
 seaborn
-tensorboardX
 jax_dataloader
-tensorflow[and-cuda]
-scikit-learn
-jax-fid

@@ -157,11 +157,11 @@ def run_experiment(exp_num, train_x, val_x, log_path):
             plt.suptitle(
                 f"Epoch: {epoch} \n\n"
                 + r"$\overline{FID}_\infty$: "
-                + f"{fid_inf:.2f}, "
+                + f"{fid_inf:.4g}, "
                 + r"$\overline{MIFID}_\infty$: "
-                + f"{mifid_inf:.2f}, "
+                + f"{mifid_inf:.4g}, "
                 + r"$\overline{KID}_\infty$: "
-                + f"{kid_inf:.2f}"
+                + f"{kid_inf:.4g}"
             )
             plt.tight_layout()
             plt.savefig(f"{log_path}/images/{epoch}.png", dpi=750)

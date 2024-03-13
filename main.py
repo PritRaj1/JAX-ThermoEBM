@@ -8,16 +8,15 @@ import tqdm
 from src.utils.helper_functions import get_data, NumpyLoader
 from src.experiment import run_experiment
 
-# os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.48"
+os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.48"
 # os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 # os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"] = "platform"
 # os.environ["XLA_FLAGS"] = (
 #     "--xla_gpu_strict_conv_algorithm_picker=false --xla_gpu_force_compilation_parallelism=1"
 # )
+# os.environ["XLA_FLAGS"]="--xla_gpu_force_compilation_parallelism=1"
 
-os.environ["XLA_FLAGS"]="--xla_gpu_force_compilation_parallelism=1"
-
-print(f"Device Count: {jax.device_count()}")
+# print(f"Device Count: {jax.device_count()}")
 
 parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")
