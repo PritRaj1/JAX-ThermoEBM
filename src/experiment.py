@@ -55,7 +55,10 @@ def run_experiment(exp_num, train_x, val_x, log_path):
 
     metrics_fcn = partial(
         profile_generation,
-        x=val_x.reshape(
+        train_x=train_x[:max_samples].reshape(
+            -1, train_x.shape[-3], train_x.shape[-2], train_x.shape[-1]
+        ),  # Flatten batches
+        val_x=val_x.reshape(
             -1, val_x.shape[-3], val_x.shape[-2], val_x.shape[-1]
         ),  # Flatten batches
         fwd_fcn_tup=fwd_fcn_tup,

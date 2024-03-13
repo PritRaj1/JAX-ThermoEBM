@@ -47,7 +47,7 @@ def cosine_similarity(real_features, fake_features):
     return cosine_sim.mean() 
 
 
-def calculate_mifid(real_features, fake_features):
+def calculate_mifid(train_features, val_features, fake_features):
     """
     Memorisation-information FID.
 
@@ -55,10 +55,10 @@ def calculate_mifid(real_features, fake_features):
     """
 
     # Calculate FID
-    fid = calculate_fid(real_features, fake_features)
+    fid = calculate_fid(val_features, fake_features)
 
-    # Calculate cosine similarity
-    cosine_sim = cosine_similarity(real_features, fake_features)
+    # Penalise memorisation of training data
+    cosine_sim = cosine_similarity(train_features, fake_features)
 
     # Calculate MIFID
     mifid = fid / (cosine_sim)

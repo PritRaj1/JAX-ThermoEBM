@@ -8,13 +8,21 @@ from src.metrics.inception_network.feature_extractor import extract_features
 from src.pipeline.generate import generate_images
 
 
-def metrics_fcn(key, sample_size, x_activations, x_pred_activations):
+def metrics_fcn(
+    key, sample_size, train_activations, val_activations, x_pred_activations
+):
 
-    # Build random subset
+    # Build random subsets
     key, subkey = jax.random.split(key)
-    x_act_i = jax.random.choice(
+    train_act_i = jax.random.choice(
         subkey,
-        x_activations,
+        train_activations,
+        shape=(sample_size,),
+        replace=True,
+    )
+    val_act_i = jax.random.choice(
+        subkey,
+        val_activations,
         shape=(sample_size,),
         replace=True,
     )
@@ -26,13 +34,21 @@ def metrics_fcn(key, sample_size, x_activations, x_pred_activations):
     )
 
     # Compute metrics
-    fid, mifid, kid = get_metrics(x_act_i, x_pred_act_i)
+    fid, mifid, kid = get_metrics(train_act_i, val_act_i, x_pred_act_i)
 
     return key, (fid, mifid, kid)
 
 
 def profile_generation(
-    key, params_tup, x, fwd_fcn_tup, min_samples, max_samples, num_points, num_plot
+    key,
+    params_tup,
+    train_x,
+    val_x,
+    fwd_fcn_tup,
+    min_samples,
+    max_samples,
+    num_points,
+    num_plot,
 ):
     """
     Function to profile the generative capacity of the model.
@@ -67,7 +83,7 @@ def profile_generation(
         fwd_fcn_tup=fwd_fcn_tup,
     )
 
-    if max_samples > len(x):
+    if max_samples > len(val_x):
         raise ValueError("Max samples cannot exceed the number of test images.")
     elif min_samples > max_samples:
         raise ValueError("Min samples cannot exceed max samples.")
@@ -76,10 +92,15 @@ def profile_generation(
     key, x_pred = gen_fcn(key)
 
     # Get all activations
-    x_activations = extract_features(x)
+
+    train_activations = extract_features(train_x)
+    val_activations = extract_features(val_x)
     x_pred_activations = extract_features(x_pred)
     loaded_metrics = partial(
-        metrics_fcn, x_activations=x_activations, x_pred_activations=x_pred_activations
+        metrics_fcn,
+        train_activations=train_activations,
+        val_activations=val_activations,
+        x_pred_activations=x_pred_activations,
     )
 
     fid = jnp.zeros(num_points)
@@ -101,7 +122,7 @@ def profile_generation(
 
     # Return 4 random images for plotting (visual inspection)
     key, subkey = jax.random.split(key)
-    real = jax.random.choice(subkey, x, shape=(num_plot,), replace=False)
+    real = jax.random.choice(subkey, val_x, shape=(num_plot,), replace=False)
     fake = jax.random.choice(subkey, x_pred, shape=(num_plot,), replace=False)
 
     return key, fid_inf, mifid_inf, kid_inf, real, fake
