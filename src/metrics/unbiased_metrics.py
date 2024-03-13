@@ -4,7 +4,7 @@ import numpy as np
 from functools import partial
 
 from src.metrics.get_metrics import get_metrics
-from src.metrics.inception_network import extract_features
+from src.metrics.inception_network.feature_extractor import extract_features
 from src.pipeline.generate import generate_images
 
 

@@ -1,5 +1,4 @@
 import jax
-from jax import config
 import numpy as np
 import os
 import torch
@@ -9,7 +8,7 @@ import tqdm
 from src.utils.helper_functions import get_data, NumpyLoader
 from src.experiment import run_experiment
 
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.48"
+# os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.48"
 # os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 # os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"] = "platform"
 # os.environ["XLA_FLAGS"] = (

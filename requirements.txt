@@ -13,3 +13,4 @@ tensorboardX
 jax_dataloader
 tensorflow[and-cuda]
 scikit-learn
+jax-fid
