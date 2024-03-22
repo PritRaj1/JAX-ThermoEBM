@@ -3,14 +3,14 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Set plot styling
-sns.set(font_scale=1.2)
+sns.set(font_scale=1.1)
 sns.set_style("whitegrid", rc ={'text.usetex' : True, 'font.family' : 'serif', 'font.serif' : ['Computer Modern']})
 
 
-p_list = [0, 1, 3, 5, 7]
+p_list = [0, 0.3, 1, 3, 10]
 num_temps = 100
 
-plt.figure()
+plt.figure(figsize=(10, 6))
 for p in p_list:
     temp = np.linspace(0, 1, num_temps) ** p
     label = "p = {}".format(p) if p != 0 else "p = 0 (Vanilla Model)"
