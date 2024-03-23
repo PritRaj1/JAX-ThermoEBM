@@ -104,7 +104,7 @@ def Thermo_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     - GEN_fwd: generator forward pass, --immutable
 
     Returns:
-    - total_loss: the total lkhood loss for the entire thermodynamic integration loop, log(p_β(x|z))
+    - total_loss: the total lkhood loss for the entire thermodynamic integration loop, ∫ E_{z|x,t}[ log(p_β(x|z)) ] dt
     """
 
     # Wrap the themodynamic loop in a partial function to exploit partial immutability
