@@ -33,7 +33,6 @@ def run_experiment(exp_num, train_x, val_x, log_path):
     key, GEN_params, GEN_fwd = init_GEN(key)
     EBM_optimiser, EBM_opt_state = init_EBM_optimiser(EBM_params)
     GEN_optimiser, GEN_opt_state = init_GEN_optimiser(GEN_params)
-    temp_schedule = init_temp_schedule()
 
     # Tuple up for cleanliness
     params_tup = (EBM_params, GEN_params)
@@ -47,10 +46,9 @@ def run_experiment(exp_num, train_x, val_x, log_path):
         train_step,
         optimiser_tup=optimiser_tup,
         fwd_fcn_tup=fwd_fcn_tup,
-        temp_schedule=temp_schedule,
     )
     loaded_val_step = partial(
-        val_step, fwd_fcn_tup=fwd_fcn_tup, temp_schedule=temp_schedule
+        val_step, fwd_fcn_tup=fwd_fcn_tup,
     )
 
     metrics_fcn = partial(

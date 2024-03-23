@@ -109,7 +109,7 @@ def get_data(name):
 def make_grid(images, n_row=4, padding=1, pad_value=0):
     """Make a grid of images."""
 
-    #Upscale [-1, 1] to [0, 1] to avoid clipping
+    # Upscale [-1, 1] to [0, 1] to avoid clipping
     images = (images + 1) / 2
 
     n_images = images.shape[0]
@@ -132,5 +132,5 @@ def make_grid(images, n_row=4, padding=1, pad_value=0):
             col * (images.shape[2] + padding) : col * (images.shape[2] + padding)
             + images.shape[2],
         ] = images[i]
-        
+
     return grid

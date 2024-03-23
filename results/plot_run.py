@@ -40,13 +40,13 @@ for temp in TEMPS:
 
         # Create a dataframe with all the train loss
         if i == 0:
-            all_train_loss = df[["Train Loss"]]
-            all_train_grad_var = df[["Train Grad Var"]]
-            all_val_loss = df[["Val Loss"]]
-            all_val_grad_var = df[["Val Grad Var"]]
-            all_fid = df[["FID_inf"]]
-            all_mifid = df[["MIFID_inf"]]
-            all_kid = df[["KID_inf"]]
+            all_train_loss = df["Train Loss"]
+            all_train_grad_var = df["Train Grad Var"]
+            all_val_loss = df["Val Loss"]
+            all_val_grad_var = df["Val Grad Var"]
+            all_fid = df["FID_inf"]
+            all_mifid = df["MIFID_inf"]
+            all_kid = df["KID_inf"]
             epochs = df["Epoch"]
 
         else:
@@ -60,15 +60,15 @@ for temp in TEMPS:
 
     all_train_loss.columns = [f"experiment_{i}" for i in range(NUM_EXPERIMENTS)]
     all_train_loss['epoch'] = epochs
-    all_train_loss = all_train_loss.melt(id_vars='epoch', var_name='experiment', value_name="Train Loss")
+    all_train_loss = all_train_loss.melt(id_vars='epoch', var_name='experiment', value_name='Train Loss')
 
     all_train_grad_var.columns = [f"experiment_{i}" for i in range(NUM_EXPERIMENTS)]
     all_train_grad_var['epoch'] = epochs
-    all_train_grad_var = all_train_grad_var.melt(id_vars='epoch', var_name='experiment', value_name="Train Grad Var")
+    all_train_grad_var = all_train_grad_var.melt(id_vars='epoch', var_name='experiment', value_name='Train Grad Var')
 
     all_val_loss.columns = [f"experiment_{i}" for i in range(NUM_EXPERIMENTS)]
     all_val_loss['epoch'] = epochs
-    all_val_loss = all_val_loss.melt(id_vars='epoch', var_name='experiment', value_name="Val Loss")
+    all_val_loss = all_val_loss.melt(id_vars='epoch', var_name='experiment', value_name='Val Loss')
 
     all_val_grad_var.columns = [f"experiment_{i}" for i in range(NUM_EXPERIMENTS)]
     all_val_grad_var['epoch'] = epochs

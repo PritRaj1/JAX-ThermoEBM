@@ -1,7 +1,7 @@
 import jax
 from functools import partial
 import configparser
-from jax.lax import scan
+from jax.lax import scan, stop_gradient
 
 from src.MCMC_Samplers.langevin_updates import langevin_prior, langevin_posterior
 
@@ -54,7 +54,7 @@ def sample_prior(key, EBM_params, EBM_fwd):
     # Scan along the noise to iteratively update z
     z_prior, _ = scan(scan_MCMC, z0, noise, length=prior_steps)
 
-    return key, z_prior
+    return key, stop_gradient(z_prior)
 
 
 def sample_posterior(key, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
@@ -93,4 +93,4 @@ def sample_posterior(key, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     # Scan along the noise to iteratively update z
     z_posterior, _ = scan(scan_MCMC, z0, noise, length=posterior_steps)
 
-    return key, z_posterior
+    return key, stop_gradient(z_posterior)

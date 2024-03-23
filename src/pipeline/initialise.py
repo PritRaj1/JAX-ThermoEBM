@@ -16,8 +16,6 @@ E_beta_1 = float(parser["OPTIMIZER"]["E_BETA_1"])
 G_beta_1 = float(parser["OPTIMIZER"]["G_BETA_1"])
 E_beta_2 = float(parser["OPTIMIZER"]["E_BETA_2"])
 G_beta_2 = float(parser["OPTIMIZER"]["G_BETA_2"])
-temp_power = float(parser["TEMP"]["TEMP_POWER"])
-num_temps = int(parser["TEMP"]["NUM_TEMPS"])
 
 
 def init_EBM(key):
@@ -58,19 +56,3 @@ def init_GEN_optimiser(GEN_params):
     GEN_opt_state = GEN_optimiser.init(GEN_params)
 
     return GEN_optimiser, GEN_opt_state
-
-
-def init_temp_schedule():
-    """Set the temperature schedule."""
-
-    if temp_power > 0:
-        print("Using Temperature Schedule with Power: {}".format(temp_power))
-        temp = jnp.linspace(0, 1, num_temps) ** temp_power
-        print("Temperature Schedule: {}".format(temp))
-
-    else:
-        print("Using no Thermodynamic Integration, defaulting to Vanilla Model")
-        temp = jnp.array([1])
-        print("Temperature Schedule: {}".format(temp))
-
-    return temp
