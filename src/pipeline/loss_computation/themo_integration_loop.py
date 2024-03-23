@@ -59,7 +59,7 @@ def EBM_loop(carry, t, x, EBM_params, EBM_fwd, GEN_params, GEN_fwd):
     # ∇T = t_i - t_{i-1}
     delta_T = t - t_prev
 
-    # 1/2 * (L(x_i) + L(x_{i-1})) * ∇T
+    # 1/2 * (L(t_i) + L(t_{i-1})) * ∇T
     temperatue_loss = 0.5 * (current_loss + prev_loss) * delta_T
 
     # Add temp loss to the stack and carry over the current state
@@ -82,7 +82,7 @@ def GEN_loop(carry, t, x, EBM_params, EBM_fwd, GEN_params, GEN_fwd):
     # ∇T = t_i - t_{i-1}
     delta_T = t - t_prev
 
-    # # 1/2 * (L(x_i) + L(x_{i-1})) * ∇T
+    # # 1/2 * (L(t_i) + L(t_{i-1})) * ∇T
     temperature_loss = 0.5 * (current_loss + prev_loss) * delta_T
 
     # Add temp loss to the stack and carry over the current state
