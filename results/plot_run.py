@@ -1,6 +1,11 @@
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
+import os
+
+os.makedirs("results/evolutions", exist_ok=True)
+os.makedirs("results/boxplots", exist_ok=True)
+os.makedirs("results/relationships", exist_ok=True)
 
 # Set plot styling
 sns.set(font_scale=1.1)
@@ -97,7 +102,7 @@ for temp in TEMPS:
 plt.xlabel("Epoch")
 plt.ylabel(r"$-\log(p(\mathbf{x}|\theta))$")
 plt.title(f'Average Train Loss for {NUM_EXPERIMENTS} Experiments')
-plt.savefig(f"results/train_loss.png")
+plt.savefig(f"results/evolutions/train_loss.png")
 
 # Plot the train grad var
 plt.figure(figsize=(10, 6))
@@ -107,7 +112,7 @@ for temp in TEMPS:
 plt.xlabel("Epoch")
 plt.ylabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p(\mathbf{x}|\theta))\right]$")
 plt.title(f'Average Train Gradient Variance for {NUM_EXPERIMENTS} Experiments')
-plt.savefig(f"results/train_grad_var.png")
+plt.savefig(f"results/evolutions/train_grad_var.png")
 
 # Plot the val loss
 plt.figure(figsize=(10, 6))
@@ -117,7 +122,7 @@ for temp in TEMPS:
 plt.xlabel("Epoch")
 plt.ylabel(r"$-\log(p(\mathbf{x}|\theta))$")
 plt.title(f'Average Validation Loss for {NUM_EXPERIMENTS} Experiments')
-plt.savefig(f"results/val_loss.png")
+plt.savefig(f"results/evolutions/val_loss.png")
 
 # Plot the val grad var
 plt.figure(figsize=(10, 6))
@@ -127,7 +132,7 @@ for temp in TEMPS:
 plt.xlabel("Epoch")
 plt.ylabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p(\mathbf{x}|\theta))\right]$")
 plt.title(f'Average Validation Gradient Variance for {NUM_EXPERIMENTS} Experiments')
-plt.savefig(f"results/val_grad_var.png")
+plt.savefig(f"results/evolutions/val_grad_var.png")
 
 # Plot the FID
 plt.figure(figsize=(10, 6))
@@ -137,7 +142,7 @@ for temp in TEMPS:
 plt.xlabel("Epoch")
 plt.ylabel(r"$\overline{FID}_\infty$")
 plt.title(f'Average ' + r"$\overline{FID}_\infty$" + f' for {NUM_EXPERIMENTS} Experiments')
-plt.savefig(f"results/fid.png")
+plt.savefig(f"results/evolutions/fid.png")
 
 # Plot the KID
 plt.figure(figsize=(10, 6))
@@ -147,7 +152,7 @@ for temp in TEMPS:
 plt.xlabel("Epoch")
 plt.ylabel(r"$\overline{KID}_\infty$")
 plt.title(f'Average ' + r"$\overline{KID}_\infty$" + f' for {NUM_EXPERIMENTS} Experiments')
-plt.savefig(f"results/kid.png")
+plt.savefig(f"results/evolutions/kid.png")
 
 # Plot the MIFID
 plt.figure(figsize=(10, 6))
@@ -157,6 +162,7 @@ for temp in TEMPS:
 plt.xlabel("Epoch")
 plt.ylabel(r"$\overline{MIFID}_\infty$")
 plt.title(f'Average ' + r"$\overline{MIFID}_\infty$" + f' for {NUM_EXPERIMENTS} Experiments')
+plt.savefig(f"results/evolutions/mifid.png")
 
 # Plot boxplot of the final loss and metrics for each temperature
 for temp in TEMPS:
@@ -198,43 +204,43 @@ plt.figure(figsize=(15, 3))
 sns.boxplot(data=all_final_train_loss, x='Train Loss', y='temp', fill=False, orient='h', hue='temp')
 plt.ylabel(r"$-\log(p(\mathbf{x}|\theta))$")
 plt.title(f'Final Train Loss for {NUM_EXPERIMENTS} Experiments')
-plt.savefig(f"results/final_train_loss.png")
+plt.savefig(f"results/boxplots/final_train_loss.png")
 
 plt.figure(figsize=(15, 3))
 sns.boxplot(data=all_final_train_grad_var, x='Train Grad Var', y='temp', fill=False, orient='h', hue='temp')
 plt.ylabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p(\mathbf{x}|\theta))\right]$")
 plt.title(f'Final Train Gradient Variance for {NUM_EXPERIMENTS} Experiments')
-plt.savefig(f"results/final_train_grad_var.png")
+plt.savefig(f"results/boxplots/final_train_grad_var.png")
 
 plt.figure(figsize=(15, 3))
 sns.boxplot(data=all_final_val_loss, x='Val Loss', y='temp', fill=False, orient='h', hue='temp')
 plt.ylabel(r"$-\log(p(\mathbf{x}|\theta))$")
 plt.title(f'Final Validation Loss for {NUM_EXPERIMENTS} Experiments')
-plt.savefig(f"results/final_val_loss.png")
+plt.savefig(f"results/boxplots/final_val_loss.png")
 
 plt.figure(figsize=(15, 3))
 sns.boxplot(data=all_final_val_grad_var, x='Val Grad Var', y='temp', fill=False, orient='h', hue='temp')
 plt.ylabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p(\mathbf{x}|\theta))\right]$")
 plt.title(f'Final Validation Gradient Variance for {NUM_EXPERIMENTS} Experiments')
-plt.savefig(f"results/final_val_grad_var.png")
+plt.savefig(f"results/boxplots/final_val_grad_var.png")
 
 plt.figure(figsize=(15, 3))
 sns.boxplot(data=all_final_fid, x='FID_inf', y='temp', fill=False, orient='h', hue='temp')
 plt.ylabel(r"$\overline{FID}_\infty$")
 plt.title(f'Final ' + r"$\overline{FID}_\infty$" + f' for {NUM_EXPERIMENTS} Experiments')
-plt.savefig(f"results/final_fid.png")
+plt.savefig(f"results/boxplots/final_fid.png")
 
 plt.figure(figsize=(15, 3))
 sns.boxplot(data=all_final_kid, x='KID_inf', y='temp', fill=False, orient='h', hue='temp')
 plt.ylabel(r"$\overline{KID}_\infty$")
 plt.title(f'Final ' + r"$\overline{KID}_\infty$" + f' for {NUM_EXPERIMENTS} Experiments')
-plt.savefig(f"results/final_kid.png")
+plt.savefig(f"results/boxplots/final_kid.png")
 
 plt.figure(figsize=(15, 3))
 sns.boxplot(data=all_final_mifid, x='MIFID_inf', y='temp', fill=False, orient='h', hue='temp')
 plt.ylabel(r"$\overline{MIFID}_\infty$")
 plt.title(f'Final ' + r"$\overline{MIFID}_\infty$" + f' for {NUM_EXPERIMENTS} Experiments')
-plt.savefig(f"results/final_mifid.png")
+plt.savefig(f"results/boxplots/final_mifid.png")
 
 # Plot final fid against variance, with error bars
 fid_var = pd.merge(all_final_val_grad_var, all_final_fid, on=['experiment', 'temp'])
@@ -246,9 +252,43 @@ for temp in TEMPS:
     std_fid = fid_var[fid_var['temp'] == label]['FID_inf'].std()
     mean_var = fid_var[fid_var['temp'] == label]['Val Grad Var'].mean()
     std_var = fid_var[fid_var['temp'] == label]['Val Grad Var'].std()
-    plt.errorbar(mean_var, mean_fid, xerr=std_var, yerr=std_fid, fmt='x', label=label)
+    plt.errorbar(mean_var, mean_fid, xerr=std_var, yerr=std_fid, capsize=2, marker='x', label=label)
 plt.xlabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p(\mathbf{x}|\theta))\right]$")
 plt.ylabel(r"$\overline{FID}_\infty$")
 plt.title(f'Final ' + r"$\overline{FID}_\infty$" + ' against Validation Gradient Variance')
 plt.legend()
-plt.savefig(f"results/fid_var.png")
+plt.savefig(f"results/relationships/fid_var.png")
+
+# Plot final mifid against variance, with error bars
+mifid_var = pd.merge(all_final_val_grad_var, all_final_mifid, on=['experiment', 'temp'])
+
+plt.figure(figsize=(10, 6))
+for temp in TEMPS:
+    label = r'p=' + f'{temp}' if temp != 0 else r'Vanilla Model'
+    mean_mifid = mifid_var[mifid_var['temp'] == label]['MIFID_inf'].mean()
+    std_mifid = mifid_var[mifid_var['temp'] == label]['MIFID_inf'].std()
+    mean_var = mifid_var[mifid_var['temp'] == label]['Val Grad Var'].mean()
+    std_var = mifid_var[mifid_var['temp'] == label]['Val Grad Var'].std()
+    plt.errorbar(mean_var, mean_mifid, xerr=std_var, yerr=std_mifid, fmt='x', label=label, capsize=2)
+plt.xlabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p(\mathbf{x}|\theta))\right]$")
+plt.ylabel(r"$\overline{MIFID}_\infty$")
+plt.title(f'Final ' + r"$\overline{MIFID}_\infty$" + ' against Validation Gradient Variance')
+plt.legend()
+plt.savefig(f"results/relationships/mifid_var.png")
+
+# Plot final kid against variance, with error bars
+kid_var = pd.merge(all_final_val_grad_var, all_final_kid, on=['experiment', 'temp'])
+
+plt.figure(figsize=(10, 6))
+for temp in TEMPS:
+    label = r'p=' + f'{temp}' if temp != 0 else r'Vanilla Model'
+    mean_kid = kid_var[kid_var['temp'] == label]['KID_inf'].mean()
+    std_kid = kid_var[kid_var['temp'] == label]['KID_inf'].std()
+    mean_var = kid_var[kid_var['temp'] == label]['Val Grad Var'].mean()
+    std_var = kid_var[kid_var['temp'] == label]['Val Grad Var'].std()
+    plt.errorbar(mean_var, mean_kid, xerr=std_var, yerr=std_kid, label=label, capsize=2, marker='x')
+plt.xlabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p(\mathbf{x}|\theta))\right]$")
+plt.ylabel(r"$\overline{KID}_\infty$")
+plt.title(f'Final ' + r"$\overline{KID}_\infty$" + ' against Validation Gradient Variance')
+plt.legend()
+plt.savefig(f"results/relationships/kid_var.png")
