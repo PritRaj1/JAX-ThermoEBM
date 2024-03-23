@@ -1,11 +1,7 @@
 -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-torch
-torchvision
-torchmetrics
-jax[cuda12_pip]
+jax[cuda11_pip]
 flax[all]
 optax
-chex
 matplotlib
+tqdm
 seaborn
-jax_dataloader
