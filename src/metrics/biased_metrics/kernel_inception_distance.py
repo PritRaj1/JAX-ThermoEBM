@@ -1,5 +1,11 @@
 
 import jax.numpy as jnp
+import configparser
+
+parser = configparser.ConfigParser()
+parser.read("hyperparams.ini")
+
+pl_sig = float(parser["SIGMAS"]["LKHOOD_SIGMA"])
 
 def kernel_matrix(x, y, gamma):
     """Compute the rbf pairwise kernel matrix."""
@@ -24,6 +30,6 @@ def calculate_kid(x, y):
     # Compute the kernel matrices
     k_xx = kernel_matrix(x, x, gamma) - jnp.diag(jnp.ones(x.shape[0]))
     k_yy = kernel_matrix(y, y, gamma) - jnp.diag(jnp.ones(x.shape[0]))
-    k_xy = kernel_matrix(x, y, gamma) - jnp.diag(jnp.ones(x.shape[0]))
+    k_xy = kernel_matrix(x, y, gamma) 
 
-    return k_xx.mean() + k_yy.mean() - 2 * k_xy.mean()
+    return (k_xx + k_yy).mean() - 2 * k_xy.mean()

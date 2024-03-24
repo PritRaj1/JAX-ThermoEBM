@@ -23,11 +23,11 @@ def sample_p0(key):
     return key, p0_sig * jax.random.normal(subkey, (1, 1, z_channels))
 
 
-def get_noise_step(key, num_steps, step_size, shape):
+def get_noise_step(key, num_steps, shape):
     """Get all noises for the MCMC steps."""
 
     key, subkey = jax.random.split(key)
-    return key, step_size * jax.random.normal(subkey, (num_steps,) + shape)
+    return key, jax.random.normal(subkey, (num_steps,) + shape)
 
 
 def sample_prior(key, EBM_params, EBM_fwd):
@@ -49,7 +49,7 @@ def sample_prior(key, EBM_params, EBM_fwd):
 
     # Sample all noise at once, to avoid reseeding the PRNG and reduce overhead
     key, z0 = sample_p0(key)
-    key, noise = get_noise_step(key, prior_steps, prior_s, z0.shape)
+    key, noise = get_noise_step(key, prior_steps, z0.shape)
 
     # Scan along the noise to iteratively update z
     z_prior, _ = scan(scan_MCMC, z0, noise, length=prior_steps)
@@ -88,7 +88,7 @@ def sample_posterior(key, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
 
     # Sample all noise at once, to avoid reseeding the PRNG and reduce overhead
     key, z0 = sample_p0(key)
-    key, noise = get_noise_step(key, posterior_steps, posterior_s, z0.shape)
+    key, noise = get_noise_step(key, posterior_steps, z0.shape)
 
     # Scan along the noise to iteratively update z
     z_posterior, _ = scan(scan_MCMC, z0, noise, length=posterior_steps)

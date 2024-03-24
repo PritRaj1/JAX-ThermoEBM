@@ -30,7 +30,7 @@ def calculate_fid(real_features, fake_features, eps=1e-4):
     diff = mu_real - mu_fake
     covmean, _ = jnp.linalg.eigh(L_real @ L_fake)
 
-    return diff @ diff + jnp.trace(var_real + var_fake - 2 * jnp.diag(covmean))
+    return diff @ diff + jnp.trace(var_real) + jnp.trace(var_fake) - 2 * jnp.sum(covmean)
 
 
 def cosine_similarity(real_features, fake_features):

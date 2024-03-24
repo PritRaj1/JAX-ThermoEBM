@@ -148,6 +148,10 @@ def run_experiment(exp_num, train_x, val_x, log_path):
             fake_grid = make_grid(four_fake, n_row=2)
             real_grid = make_grid(four_real, n_row=2)
 
+            # If fake grid is outside [0, 1], print warning
+            if (fake_grid > 1).any() or (fake_grid < 0).any():
+                print("clip", fake_grid.min(), fake_grid.max())
+
             fig, ax = plt.subplots(1, 2)
             ax[0].imshow(real_grid)
             ax[0].set_title("Real Images")

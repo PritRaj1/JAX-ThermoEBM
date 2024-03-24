@@ -117,9 +117,12 @@ def Thermo_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
         GEN_fwd=GEN_fwd,
     )
 
-    # Scan over the temperature schedule to compute the loss at each temperature
+    # Initialise t = 0 state
     key, z_init = sample_posterior(key, x, 0, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
-    initial_state = (key, 0, 0, z_init.squeeze())
+    loss_init = gen_loss(key, x, z_init, GEN_params, GEN_fwd)[1]
+    initial_state = (key, 0, loss_init, z_init.squeeze())
+
+    # Scan over the temperature schedule to compute the loss at each temperature
     (_, _, _, _), temp_losses = scan(f=scan_loss, init=initial_state, xs=temp_schedule)
 
     # Sum the stacked losses over all temperature intervals to get integrated loss

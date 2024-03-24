@@ -20,25 +20,13 @@ def EBM_fcn(z, EBM_params, EBM_fwd):
 
 
 def log_llood_fcn(z, x, t, GEN_params, GEN_fwd):
-    """Compute -log[ p_β(x | z)^t ] ∝ -t * [ (x - g(z))^2 / (2 * σ^2) ]"""
+    """Compute log[ p_β(x | z)^t ] ∝ t * [ (x - g(z))^2 / (2 * σ^2) ]"""
 
     g_z = GEN_fwd(GEN_params, z)
-    mse = jnp.mean(optax.l2_loss(x, g_z))
-    log_lkhood = -t * (mse) / (2 * pl_sig**2)
+    mse = optax.l2_loss(x, g_z)
+    log_lkhood = - t * (mse) / (2 * pl_sig**2)
 
-    return log_lkhood
-
-
-### Gradient functions ###
-def grad_ebm(z, EBM_params, EBM_fwd):
-    return jax.grad(EBM_fcn, argnums=0)(z, EBM_params, EBM_fwd)
-
-
-def grad_llhood(z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
-    grad_log_llood = jax.grad(log_llood_fcn, argnums=0)(z, x, t, GEN_params, GEN_fwd)
-    grad_prior = prior_grad_log(z, EBM_params, EBM_fwd)
-    return grad_log_llood + grad_prior
-
+    return log_lkhood.sum()
 
 ### Grad log probs ###
 def prior_grad_log(z, EBM_params, EBM_fwd):
@@ -55,7 +43,7 @@ def prior_grad_log(z, EBM_params, EBM_fwd):
     - ∇_z( log[p_a(x)] )
     """
 
-    grad_f = grad_ebm(z, EBM_params, EBM_fwd)
+    grad_f = jax.grad(EBM_fcn, argnums=0)(z, EBM_params, EBM_fwd)
     return grad_f - (z / (p0_sig**2))
 
 
@@ -77,6 +65,6 @@ def posterior_grad_log(z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     - ∇_z( log[p_θ(z | x)] ) ∝ ∇_z( log[p(x | z)^t * p(z)] )
     """
 
-    grad_log_llood = grad_llhood(z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
+    grad_log_llood = jax.grad(log_llood_fcn, argnums=0)(z, x, t, GEN_params, GEN_fwd)
     grad_prior = prior_grad_log(z, EBM_params, EBM_fwd)
     return grad_log_llood + grad_prior

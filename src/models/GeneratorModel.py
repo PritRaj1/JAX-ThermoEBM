@@ -1,5 +1,6 @@
 import flax.linen as nn
 import configparser
+from functools import partial
 
 parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")
@@ -7,13 +8,14 @@ parser.read("hyperparams.ini")
 feature_dim = int(parser["GEN"]["GEN_FEATURE_DIM"])
 output_dim = int(parser["GEN"]["CHANNELS"])
 image_dim = 64 if parser["PIPELINE"]["DATASET"] == "CelebA" else 32
+leak = float(parser["GEN"]["GEN_LEAK"])
 
 
 class GEN(nn.Module):
 
     def setup(self):
 
-        self.f = nn.activation.hard_swish
+        self.f = partial(nn.activation.leaky_relu, negative_slope=leak)
 
         def conditional_64(z):
             z = nn.ConvTranspose(
