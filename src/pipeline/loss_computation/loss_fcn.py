@@ -24,7 +24,7 @@ else:
 
 
 def vanilla_EBM_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
-    """E_{z|x}[ f(z) ] - E_{z}[ f(z) ]"""
+    """-(E_{z|x}[ f(z) ] - E_{z}[ f(z) ])"""
 
     # Sample from the prior distribution, do not replace the key to make sure llhood loss uses same posterior
     _, z_prior = sample_prior(key, EBM_params, EBM_fwd)
@@ -32,20 +32,22 @@ def vanilla_EBM_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     # Sample from the untempered posterior distribution
     key, z_posterior = sample_posterior(
         key, x, 1, EBM_params, GEN_params, EBM_fwd, GEN_fwd
-    )
+    )   
 
-    return ebm_loss(z_prior, z_posterior, EBM_params, EBM_fwd)
+    # Negate to maximise the likelihood
+    return -ebm_loss(z_prior, z_posterior, EBM_params, EBM_fwd)
 
 
 def vanilla_GEN_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
-    """log[ p_β(x | z, t=1) ]"""
+    """Returns -log[ p_β(x | z, t=1) ]"""
 
     # Sample from the untempered posterior distribution
     key, z_posterior = sample_posterior(
         key, x, 1, EBM_params, GEN_params, EBM_fwd, GEN_fwd
     )
-
-    return gen_loss(key, x, z_posterior, GEN_params, GEN_fwd)[1]
+    
+    # Negate to maximise the likelihood
+    return -gen_loss(key, x, z_posterior, GEN_params, GEN_fwd)[1]
 
 
 def thermo_scan_loop(carry, t, x, EBM_params, EBM_fwd, GEN_params, GEN_fwd):
@@ -104,7 +106,7 @@ def Thermo_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     - GEN_fwd: generator forward pass, --immutable
 
     Returns:
-    - total_loss: the total lkhood loss for the entire thermodynamic integration loop, ∫ E_{z|x,t}[ log(p_β(x|z)) ] dt
+    - total_loss: the total lkhood loss for the entire thermodynamic integration loop, -∫ E_{z|x,t}[ log(p_β(x|z)) ] dt
     """
 
     # Wrap the themodynamic loop in a partial function to exploit partial immutability
@@ -125,5 +127,5 @@ def Thermo_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     # Scan over the temperature schedule to compute the loss at each temperature
     (_, _, _, _), temp_losses = scan(f=scan_loss, init=initial_state, xs=temp_schedule)
 
-    # Sum the stacked losses over all temperature intervals to get integrated loss
-    return 0.5 * temp_losses.sum()
+    # Sum the stacked losses over all temperature intervals and negate to get integrated llhood loss
+    return - 0.5 * temp_losses.sum()

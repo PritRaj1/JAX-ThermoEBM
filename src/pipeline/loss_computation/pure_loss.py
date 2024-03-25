@@ -27,8 +27,8 @@ def gen_loss(key, x, z, GEN_params, GEN_fwd):
     key, subkey = jax.random.split(key)
     x_pred = GEN_fwd(GEN_params, z) + (pl_sig * jax.random.normal(subkey, x.shape))
 
-    # Compute -log[ p_β(x | z) ] = 1/2 * (x - g(z))^2 / σ^2
+    # Compute log[ p_β(x | z) ] = 1/2 * (x - g(z))^2 / σ^2
     mse = optax.l2_loss(x, x_pred)
-    log_lkhood = mse / (2.0 * pl_sig**2)
+    log_lkhood = - mse / (2.0 * pl_sig**2)
 
     return key, log_lkhood.sum()

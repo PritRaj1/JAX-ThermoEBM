@@ -20,7 +20,7 @@ def EBM_fcn(z, EBM_params, EBM_fwd):
 
 
 def log_llood_fcn(z, x, t, GEN_params, GEN_fwd):
-    """Compute log[ p_β(x | z)^t ] ∝ t * [ (x - g(z))^2 / (2 * σ^2) ]"""
+    """Compute log[ p_β(x | z)^t ] ∝ t * [ - (x - g(z))^2 / (2 * σ^2) ]"""
 
     g_z = GEN_fwd(GEN_params, z)
     mse = optax.l2_loss(x, g_z)
