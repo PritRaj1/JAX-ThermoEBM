@@ -22,9 +22,9 @@ def train_step(
         subkey_batch, x, params_tup, fwd_fcn_tup
     )
 
-    # Take sum across batch, (reduction = sum, as used in Pang et al.)
-    grad_ebm = jax.tree_util.tree_map(lambda x: x.sum(0), batch_grad_e)
-    grad_gen = jax.tree_util.tree_map(lambda x: x.sum(0), batch_grad_g)
+    # Take mean across batch
+    grad_ebm = jax.tree_util.tree_map(lambda x: x.mean(0), batch_grad_e)
+    grad_gen = jax.tree_util.tree_map(lambda x: x.mean(0), batch_grad_g)
     grad_list = [grad_ebm, grad_gen]
 
     # Update the parameters
@@ -32,7 +32,7 @@ def train_step(
         optimiser_tup, grad_list, opt_state_tup, params_tup
     )
 
-    total_loss = batch_loss_e.sum() + batch_loss_g.sum()  # L_e + L_g
+    total_loss = batch_loss_e.mean() + batch_loss_g.mean()  # L_e + L_g
     grad_var = get_grad_var(*grad_list)
 
     return key, params_tup, opt_state_tup, total_loss, grad_var
@@ -48,11 +48,11 @@ def val_step(key, x, params_tup, fwd_fcn_tup):
         subkey_batch, x, params_tup, fwd_fcn_tup
     )
 
-    # Take sum across batch, (reduction = sum, as used in Pang et al.)
-    grad_ebm = jax.tree_util.tree_map(lambda x: x.sum(0), batch_grad_e)
-    grad_gen = jax.tree_util.tree_map(lambda x: x.sum(0), batch_grad_g)
+    # Take mean across batch
+    grad_ebm = jax.tree_util.tree_map(lambda x: x.mean(0), batch_grad_e)
+    grad_gen = jax.tree_util.tree_map(lambda x: x.mean(0), batch_grad_g)
 
-    total_loss = batch_loss_e.sum() + batch_loss_g.sum()  # L_e + L_g
+    total_loss = batch_loss_e.mean() + batch_loss_g.mean()  # L_e + L_g
     grad_var = get_grad_var(grad_ebm, grad_gen)
 
     return key, total_loss, grad_var

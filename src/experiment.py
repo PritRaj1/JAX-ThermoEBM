@@ -125,7 +125,7 @@ def run_experiment(exp_num, train_x, val_x, log_path):
         val_grad_var = val_grad_var.sum()
 
         # Profile generative capacity using unbiased metrics
-        key, fid_inf, mifid_inf, kid_inf, four_real, four_fake = jit_metrics_fcn(key, params_tup)
+        key, fid_inf, mifid_inf, kid_inf, is_inf, four_real, four_fake = jit_metrics_fcn(key, params_tup)
         
         # Save to dataframe
         epoch_df = pd.DataFrame(
@@ -138,13 +138,14 @@ def run_experiment(exp_num, train_x, val_x, log_path):
                 "FID_inf": fid_inf,
                 "MIFID_inf": mifid_inf,
                 "KID_inf": kid_inf,
+                "IS_inf": is_inf,
             },
             index=[0],
         )
 
         epoch_df.to_csv(f"{log_path}/experiment{exp_num}.csv", mode="a", header=False, index=False)
 
-        if epoch % save_every == 0 and exp_num == 0:
+        if (epoch % save_every == 0 or epoch == num_epochs-1) and exp_num == 0:
             fake_grid = make_grid(four_fake, n_row=2)
             real_grid = make_grid(four_real, n_row=2)
 
@@ -166,7 +167,9 @@ def run_experiment(exp_num, train_x, val_x, log_path):
                 + r"$\overline{MIFID}_\infty$: "
                 + f"{mifid_inf:.4g}, "
                 + r"$\overline{KID}_\infty$: "
-                + f"{kid_inf:.4g}"
+                + f"{kid_inf:.4g}, "
+                + r"$\overline{IS}_\infty$: "
+                + f"{is_inf:.4g}"
             )
             plt.tight_layout()
             plt.savefig(f"{log_path}/images/{epoch}.png", dpi=750)

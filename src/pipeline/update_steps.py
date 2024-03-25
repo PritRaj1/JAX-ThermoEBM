@@ -1,15 +1,8 @@
 import jax
-from jax import value_and_grad
 import jax.numpy as jnp
 import optax
 import configparser
-from jax.lax import stop_gradient
-
-from src.pipeline.loss_computation.loss_fcn import (
-    Thermo_loss,
-    vanilla_EBM_loss,
-    vanilla_GEN_loss,
-)
+from src.pipeline.loss_computation.loss_and_grad import vanilla_computation, thermo_computation
 
 parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")
@@ -17,14 +10,9 @@ parser.read("hyperparams.ini")
 temp_power = int(parser["TEMP"]["TEMP_POWER"])
 
 if temp_power == 0:
-    loss_EBM = vanilla_EBM_loss
-    loss_GEN = vanilla_GEN_loss
-    kill_duplicate = 1
+    loss_computation = vanilla_computation
 else:
-    loss_EBM = Thermo_loss
-    loss_GEN = Thermo_loss
-    kill_duplicate = 0 # This is used to kill the duplicate loss evaluation in the Thermo_loss function
-
+    loss_computation = thermo_computation
 
 def get_losses_and_grads(key, x, params_tup, fwd_fcn_tup):
     """
@@ -48,17 +36,7 @@ def get_losses_and_grads(key, x, params_tup, fwd_fcn_tup):
     a Jacobian when dealing with two output losses simultaneously.
     """
 
-    ebm_params, gen_params = params_tup
-
-    # Compute loss of both models, use the same key to ensure z_posterior is the same
-    loss_ebm, grad_ebm = value_and_grad(loss_EBM, argnums=2)(
-        key, x, ebm_params, stop_gradient(gen_params), *fwd_fcn_tup
-    )
-    loss_gen, grad_gen = value_and_grad(loss_GEN, argnums=3)(
-        key, x, stop_gradient(ebm_params), gen_params, *fwd_fcn_tup
-    )
-
-    return loss_ebm * kill_duplicate, grad_ebm, loss_gen, grad_gen
+    return loss_computation(key, x, params_tup, fwd_fcn_tup)
 
 
 def update_params(optimiser_tup, grad_list, opt_state_tup, params_tup):

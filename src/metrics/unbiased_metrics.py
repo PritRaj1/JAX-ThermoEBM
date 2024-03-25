@@ -34,9 +34,9 @@ def metrics_fcn(
     )
 
     # Compute metrics
-    fid, mifid, kid = get_metrics(train_act_i, val_act_i, x_pred_act_i)
+    fid, mifid, kid, incep = get_metrics(train_act_i, val_act_i, x_pred_act_i)
 
-    return key, (fid, mifid, kid)
+    return key, (fid, mifid, kid, incep)
 
 
 def profile_generation(
@@ -106,23 +106,26 @@ def profile_generation(
     fid = jnp.zeros(num_points)
     mifid = jnp.zeros(num_points)
     kid = jnp.zeros(num_points)
+    incep = jnp.zeros(num_points)
 
     # Compute image metrics for each batch size
     batch_sizes = np.linspace(min_samples, max_samples, num_points).astype(int)
     for idx, sample_size in enumerate(batch_sizes):
-        key, (fid_i, mifid_i, kid_i) = loaded_metrics(key, sample_size)
+        key, (fid_i, mifid_i, kid_i, is_i) = loaded_metrics(key, sample_size)
         fid = fid.at[idx].set(fid_i)
         mifid = mifid.at[idx].set(mifid_i)
         kid = kid.at[idx].set(kid_i)
+        incep = incep.at[idx].set(is_i)
 
     # Intepolate to infinite sample size by fitting a line and taking the intercept at 1/N = 0
     _, fid_inf = jnp.polyfit(1 / batch_sizes, fid, 1)
     _, mifid_inf = jnp.polyfit(1 / batch_sizes, mifid, 1)
     _, kid_inf = jnp.polyfit(1 / batch_sizes, kid, 1)
+    _, incep_inf = jnp.polyfit(1 / batch_sizes, incep, 1)
 
     # Return 4 random images for plotting (visual inspection)
     key, subkey = jax.random.split(key)
     real = jax.random.choice(subkey, val_x, shape=(num_plot,), replace=False)
     fake = jax.random.choice(subkey, x_pred, shape=(num_plot,), replace=False)
 
-    return key, fid_inf, mifid_inf, kid_inf, real, fake
+    return key, fid_inf, mifid_inf, kid_inf, incep_inf, real, fake

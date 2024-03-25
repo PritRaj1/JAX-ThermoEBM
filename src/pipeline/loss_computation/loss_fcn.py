@@ -4,8 +4,8 @@ from functools import partial
 import configparser
 from src.MCMC_Samplers.sample_distributions import sample_prior, sample_posterior
 from src.pipeline.loss_computation.pure_loss import ebm_loss, gen_loss
+from flax.linen import softmax, log_softmax
 from optax import kl_divergence as kl_div
-from jax.scipy.stats import gaussian_kde as kde
 
 parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")
@@ -68,13 +68,15 @@ def thermo_scan_loop(carry, t, x, EBM_params, EBM_fwd, GEN_params, GEN_fwd):
 
     # Compute the KDEs for the current and previous samples for KL divergence calculation
     z_posterior = z_posterior.squeeze()
-    prev_kde = kde(prev_z)
-    current_kde = kde(z_posterior)
+    prev_p = softmax(prev_z)
+    prev_logp = log_softmax(prev_z)
+    current_p = softmax(z_posterior)
+    current_logp = log_softmax(z_posterior)
 
     # ((L(t_i) + L(t_{i-1})) * ∇T) + (KL[z_{i-1} || z_i] - KL[z_i || z_{i-1}])
     temperature_loss = (current_loss + prev_loss) * delta_T + (
-        kl_div(prev_kde.logpdf(prev_z), current_kde.pdf(z_posterior))
-        - kl_div(current_kde.logpdf(z_posterior), prev_kde.pdf(prev_z))
+        kl_div(prev_logp, current_p)
+        - kl_div(current_logp, prev_p)
     )
 
     # Push temp loss to the stack and carry over the current state
