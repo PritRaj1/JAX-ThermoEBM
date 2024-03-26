@@ -1,11 +1,11 @@
 import jax.numpy as jnp
 from optax import kl_divergence as kl_div
-from flax.linen import softmax, log_softmax
+from flax.linen import softmax
 import jax
 
 def scan_kl(carry, x):
     """Scan function for KL divergence"""
-    return None, jnp.sum(kl_div(log_softmax(x), jnp.mean(x, axis=0)))
+    return None, jnp.sum(kl_div(jnp.log(x), jnp.mean(x, axis=0)))
 
 @jax.jit
 def calculate_is(fake_features, splits=10):

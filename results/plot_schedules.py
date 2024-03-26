@@ -43,3 +43,5 @@ plt.title("Temperature Schedule")
 plt.legend(loc="upper left")
 plt.savefig("results/temperature_schedule.png")
 
+print(LR_schedule(steps[-1]))
+
