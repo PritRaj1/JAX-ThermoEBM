@@ -10,8 +10,14 @@ from src.models.GeneratorModel import GEN
 parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")
 
-E_lr = float(parser["OPTIMIZER"]["E_LR"])
-G_lr = float(parser["OPTIMIZER"]["G_LR"])
+E_lr_start = float(parser["OPTIMIZER"]["E_INITIAL_LR"])
+G_lr_start = float(parser["OPTIMIZER"]["G_INITIAL_LR"])
+E_lr_end = float(parser["OPTIMIZER"]["E_FINAL_LR"])
+G_lr_end = float(parser["OPTIMIZER"]["G_FINAL_LR"])
+gamma = float(parser["LR_SCHEDULE"]["DECAY_RATE"])
+begin = int(parser["LR_SCHEDULE"]["BEGIN_EPOCH"]) * int(parser["PIPELINE"]["NUM_TRAIN_DATA"])/int(parser["PIPELINE"]["BATCH_SIZE"])
+step = int(parser["LR_SCHEDULE"]["STEP_INTERVAL"]) * int(parser["PIPELINE"]["NUM_TRAIN_DATA"])/int(parser["PIPELINE"]["BATCH_SIZE"])
+
 E_beta_1 = float(parser["OPTIMIZER"]["E_BETA_1"])
 G_beta_1 = float(parser["OPTIMIZER"]["G_BETA_1"])
 E_beta_2 = float(parser["OPTIMIZER"]["E_BETA_2"])
@@ -43,7 +49,8 @@ def init_GEN(key):
 def init_EBM_optimiser(EBM_params):
     """Initialise the EBM optimiser and its state."""
 
-    E_optimiser = optax.adam(E_lr, b1=E_beta_1, b2=E_beta_2)
+    LR_schedule = optax.exponential_decay(init_value=E_lr_start, transition_steps=step, decay_rate=gamma, transition_begin=begin, end_value=E_lr_end)
+    E_optimiser = optax.adam(LR_schedule, b1=E_beta_1, b2=E_beta_2)
     E_opt_state = E_optimiser.init(EBM_params)
 
     return E_optimiser, E_opt_state
@@ -52,7 +59,8 @@ def init_EBM_optimiser(EBM_params):
 def init_GEN_optimiser(GEN_params):
     """Initialise the GEN optimiser and its state."""
 
-    GEN_optimiser = optax.adam(G_lr, b1=G_beta_1, b2=G_beta_2)
+    LR_schedule = optax.exponential_decay(init_value=G_lr_start, transition_steps=step, decay_rate=gamma, transition_begin=begin, end_value=G_lr_end)
+    GEN_optimiser = optax.adam(LR_schedule, b1=G_beta_1, b2=G_beta_2)
     GEN_opt_state = GEN_optimiser.init(GEN_params)
 
     return GEN_optimiser, GEN_opt_state
