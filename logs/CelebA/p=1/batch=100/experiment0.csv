@@ -1,2 +1,0 @@
-Epoch,Train Loss,Train Grad Var,Val Loss,Val Grad Var,FID_inf,MIFID_inf,KID_inf,IS_inf
-0,688805.6,185.19992,34323.574,1.820535,464.7723,1320.7479,0.1412197,1.058675
