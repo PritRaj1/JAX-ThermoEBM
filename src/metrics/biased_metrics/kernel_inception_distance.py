@@ -27,7 +27,7 @@ def calculate_kid(x, y):
     # Set the kernel width as 1/num_features
     gamma = 1.0 / x.shape[-1]
 
-    # Compute the kernel matrices
+    # Compute the RBF kernel matrices
     k_xx = kernel_matrix(x, x, gamma) - jnp.diag(jnp.ones(x.shape[0]))
     k_yy = kernel_matrix(y, y, gamma) - jnp.diag(jnp.ones(x.shape[0]))
     k_xy = kernel_matrix(x, y, gamma) 

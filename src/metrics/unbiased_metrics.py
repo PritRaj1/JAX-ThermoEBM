@@ -3,9 +3,24 @@ import jax.numpy as jnp
 import numpy as np
 from functools import partial
 
-from src.metrics.get_metrics import get_metrics
 from src.metrics.inception_network.feature_extractor import extract_features
 from src.pipeline.generate import generate_images
+from src.metrics.biased_metrics.frechet_inception_distance import (
+    calculate_fid,
+    calculate_mifid,
+)
+from src.metrics.biased_metrics.kernel_inception_distance import calculate_kid
+from src.metrics.biased_metrics.inception_score import calculate_is
+
+
+def get_metrics(train_x_features, val_x_features, x_pred_features):
+
+    fid = calculate_fid(val_x_features, x_pred_features)
+    mifid = calculate_mifid(train_x_features, val_x_features, x_pred_features)
+    kid = calculate_kid(val_x_features, x_pred_features)
+    incep = calculate_is(x_pred_features)
+
+    return fid, mifid, kid, incep
 
 
 def metrics_fcn(
@@ -33,7 +48,7 @@ def metrics_fcn(
         replace=True,
     )
 
-    # Compute metrics
+    
     fid, mifid, kid, incep = get_metrics(train_act_i, val_act_i, x_pred_act_i)
 
     return key, (fid, mifid, kid, incep)

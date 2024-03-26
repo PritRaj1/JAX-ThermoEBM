@@ -101,6 +101,7 @@ def run_experiment(exp_num, train_x, val_x, log_path):
             "FID_inf",
             "MIFID_inf",
             "KID_inf",
+            "IS_inf",
         ]
     )
     df.to_csv(f"{log_path}/experiment{exp_num}.csv", index=False)
