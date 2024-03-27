@@ -1,14 +1,14 @@
+import os
+os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.95"
+
 import jax
 import numpy as np
-import os
 import torch
 import configparser
 import tqdm
 
 from src.utils.helper_functions import get_data, NumpyLoader
 from src.experiment import run_experiment
-
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.98"
 
 parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")

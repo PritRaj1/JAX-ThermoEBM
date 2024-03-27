@@ -147,8 +147,8 @@ def run_experiment(exp_num, train_x, val_x, log_path):
         epoch_df.to_csv(f"{log_path}/experiment{exp_num}.csv", mode="a", header=False, index=False)
 
         if (epoch % save_every == 0 or epoch == num_epochs-1) and exp_num == 0:
-            fake_grid = make_grid(four_fake, n_row=2)
-            real_grid = make_grid(four_real, n_row=2)
+            fake_grid = make_grid(four_fake, n_row=4)
+            real_grid = make_grid(four_real, n_row=4)
 
             # If fake grid is outside [0, 1], print warning
             if (fake_grid > 1).any() or (fake_grid < 0).any():
