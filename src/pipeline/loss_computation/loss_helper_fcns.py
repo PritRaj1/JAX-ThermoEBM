@@ -14,9 +14,7 @@ batch_size = int(parser["PIPELINE"]["BATCH_SIZE"])
 def get_ebm_energies(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     """Returns  f(z|x, t=1), f(z), z ~ p(z|x, t=1)"""
     key, z_prior = sample_prior(key, EBM_params, EBM_fwd)
-    z_posterior = sample_posterior(
-        key, x, 1, EBM_params, GEN_params, EBM_fwd, GEN_fwd
-    )
+    z_posterior = sample_posterior(key, x, 1, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
     return EBM_fwd(EBM_params, z_posterior), EBM_fwd(EBM_params, z_prior), z_posterior
 
 

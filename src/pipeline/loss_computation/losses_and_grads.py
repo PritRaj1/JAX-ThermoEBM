@@ -18,6 +18,7 @@ else:
     loss_fcn = vanilla_loss
     print("Using no Thermodynamic Integration, defaulting to Vanilla Model")
 
+
 def get_losses_and_grads(key, x, params_tup, fwd_fcn_tup):
     """Function to compute the losses and gradients of the thermodynamic models."""
 
