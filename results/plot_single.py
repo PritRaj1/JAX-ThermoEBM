@@ -7,7 +7,7 @@ df = pd.read_csv("logs/CelebA/p=0/batch=100/experiment0.csv")
 
 # Plot df["Train Loss"]
 plt.figure()
-plt.plot(df["Train Loss"], label="Val")
+plt.plot(df["KID_inf"], label="Val")
 plt.legend()
 plt.xlabel("Epoch")
 plt.ylabel("Train Loss")
