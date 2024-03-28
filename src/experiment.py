@@ -6,7 +6,7 @@ import numpy as np
 from tqdm import tqdm
 
 from src.pipeline.initialise import *
-from src.pipeline.batch_steps import train_step, val_step
+from src.pipeline.pipeline_steps import train_step, val_step
 from src.metrics.unbiased_metrics import profile_generation
 from src.utils.helper_functions import make_grid
 
@@ -75,17 +75,17 @@ def run_experiment(exp_num, train_x, val_x, log_path):
     def train_batches(carry, x):
         """Batch training fcn for scanning."""
         key, params_tup, opt_state_tup = carry
-        key, params_tup, opt_state_tup, loss, var = jit_train_step(
+        key, params_tup, opt_state_tup, loss, grad, var = jit_train_step(
             key, x, params_tup, opt_state_tup
         )
-        return (key, params_tup, opt_state_tup), (loss, var)
+        return (key, params_tup, opt_state_tup), (loss, grad, var)
 
     @jax.jit
     def val_batches(carry, x, params_tup):
         """Batch validation fcn for scanning."""
         key = carry
-        key, loss, var = jit_val_step(key, x, params_tup)
-        return (key), (loss, var)
+        key, loss, grad, var = jit_val_step(key, x, params_tup)
+        return (key), (loss, grad, var)
 
     img_evolution = np.zeros(
         (num_epochs // save_every, val_x.shape[-3], val_x.shape[-2], val_x.shape[-1])
@@ -95,8 +95,10 @@ def run_experiment(exp_num, train_x, val_x, log_path):
         columns=[
             "Epoch",
             "Train Loss",
+            "Train Grad",
             "Train Grad Var",
             "Val Loss",
+            "Val Grad",
             "Val Grad Var",
             "FID_inf",
             "MIFID_inf",
@@ -110,20 +112,22 @@ def run_experiment(exp_num, train_x, val_x, log_path):
     for epoch in range(num_epochs):
 
         # Train
-        (key, params_tup, opt_state_tup), (train_loss, train_grad_var) = jax.lax.scan(
+        (key, params_tup, opt_state_tup), (train_loss, train_grad, train_grad_var) = jax.lax.scan(
             f=train_batches, init=(key, params_tup, opt_state_tup), xs=train_x
         )
 
-        train_loss = train_loss.sum()
-        train_grad_var = train_grad_var.sum()
+        train_loss = train_loss.mean()
+        train_grad = train_grad.mean()
+        train_grad_var = train_grad_var.mean()
 
         # Validate
-        key, (val_loss, val_grad_var) = jax.lax.scan(
+        key, (val_loss, val_grad, val_grad_var) = jax.lax.scan(
             f=partial(val_batches, params_tup=params_tup), init=key, xs=val_x
         )
 
-        val_loss = val_loss.sum()
-        val_grad_var = val_grad_var.sum()
+        val_loss = val_loss.mean()
+        val_grad = val_grad.mean()
+        val_grad_var = val_grad_var.mean()
 
         # Profile generative capacity using unbiased metrics
         key, fid_inf, mifid_inf, kid_inf, is_inf, four_real, four_fake = jit_metrics_fcn(key, params_tup)
@@ -133,8 +137,10 @@ def run_experiment(exp_num, train_x, val_x, log_path):
             {
                 "Epoch": epoch,
                 "Train Loss": train_loss,
+                "Train Grad": train_grad,
                 "Train Grad Var": train_grad_var,
                 "Val Loss": val_loss,
+                "Val Grad": val_grad,
                 "Val Grad Var": val_grad_var,
                 "FID_inf": fid_inf,
                 "MIFID_inf": mifid_inf,

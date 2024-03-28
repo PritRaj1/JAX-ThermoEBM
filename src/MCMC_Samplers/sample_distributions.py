@@ -93,4 +93,4 @@ def sample_posterior(key, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     # Scan along the noise to iteratively update z
     z_posterior, _ = scan(scan_MCMC, z0, noise, length=posterior_steps)
 
-    return key, stop_gradient(z_posterior)
+    return stop_gradient(z_posterior)
