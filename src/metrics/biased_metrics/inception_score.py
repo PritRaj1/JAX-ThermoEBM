@@ -3,7 +3,7 @@ import jax.numpy as jnp
 from optax import kl_divergence as kl_div
 from flax.linen import softmax
 
-IS_divergence = lambda x: jnp.exp((jnp.sum(kl_div(jnp.log(x), jnp.mean(x, axis=0)), axis=-1)))
+IS_divergence = lambda x: jnp.exp((jnp.sum(kl_div(jnp.log(x), jnp.mean(x, axis=0, keepdims=True)), axis=-1)))
 vmapped_div = jax.vmap(IS_divergence)
 
 @jax.jit
