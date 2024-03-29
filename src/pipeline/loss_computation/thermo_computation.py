@@ -39,7 +39,7 @@ def thermo_scan_loop(carry, t, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     """Loop step to compute the GEN loss at one temperature."""
 
     # Parse the carry state
-    key, t_prev, prev_loss, prev_z = carry
+    key, t_prev, prev_loss, prev_z, keep_KL = carry
 
     # Get liklihood, E_{z|x,t}[ log(p_β(x|z,t)) ]
     key, z_posterior = get_batched_posterior(
@@ -53,12 +53,12 @@ def thermo_scan_loop(carry, t, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
 
     # ((L(t_i) + L(t_{i-1})) * ∇T) + (KL[z_{i-1} || z_i] - KL[z_i || z_{i-1}])
     temperature_loss = (current_loss + prev_loss) * delta_T + (
-        kl_div(log_softmax(prev_z), softmax(z_posterior)).mean()
-        - kl_div(log_softmax(z_posterior), softmax(prev_z)).mean()
-    )
+        kl_div(log_softmax(prev_z), softmax(z_posterior)).sum(axis=-1)
+        - kl_div(log_softmax(z_posterior), softmax(prev_z)).sum(axis=-1)
+    ).sum() * keep_KL  # Do not include KL divergence in first iter, (area is 0 between t=0 and t=0)
 
     # Push tempered loss to the stack and carry over the current state
-    return (key, t, current_loss, z_posterior), temperature_loss
+    return (key, t, current_loss, z_posterior, 1), temperature_loss
 
 
 def thermo_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
@@ -99,13 +99,13 @@ def thermo_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
         GEN_fwd=GEN_fwd,
     )
 
-    # Initialise z at the first temperature to avoid nan KL divergence
-    key, z_init = get_batched_posterior(
-        key, x, 0, EBM_params, GEN_params, EBM_fwd, GEN_fwd
-    )
-    initial_state = (key, 0.0, 0.0, z_init.squeeze())
-
     # Scan along each temperature and stack the losses
-    (_, _, _, _), temp_losses = scan(f=scan_loss, init=initial_state, xs=temp_schedule)
+    z_init = jnp.ones(
+        (batch_size, z_channels)
+    )  # Uniform distribution to ensure non-nan KL divergence
+    initial_state = (key, 0.0, 0.0, z_init, 0)
+    (_, _, _, _, _), temp_losses = scan(
+        f=scan_loss, init=initial_state, xs=temp_schedule
+    )
 
     return -0.5 * temp_losses.sum()

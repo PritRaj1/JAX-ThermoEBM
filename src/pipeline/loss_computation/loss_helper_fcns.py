@@ -29,18 +29,18 @@ def mean_EBMloss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
         subkey_batch, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd
     )
 
-    return (en_pos - en_neg).mean(), z_posterior
+    return (en_pos.mean() - en_neg.mean()), z_posterior
 
 
 def llhood(x, z, GEN_params, GEN_fwd):
-    """Returns log[ p_β(x | z, t)"""
+    """Returns log[ p_β(x | z, t) ]"""
 
     # Generate a sample from the generator
     x_pred = GEN_fwd(GEN_params, z)
 
-    # Compute log[ p_β(x | z) ] = 1/2 * (x - g(z))^2 / σ^2
+    # Compute log[ p_β(x | z) ] = - 1/2 * (x - g(z))^2 / σ^2
     mse = optax.l2_loss(x, x_pred).sum()
-    log_lkhood = -mse / (2.0 * pl_sig**2)
+    log_lkhood = - mse / (2.0 * pl_sig**2)
 
     return log_lkhood
 
