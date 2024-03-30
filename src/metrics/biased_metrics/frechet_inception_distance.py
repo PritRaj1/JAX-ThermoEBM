@@ -20,8 +20,8 @@ def calculate_fid(real_features, fake_features, eps=1e-4):
     # Mean and covariances
     mu_real = real_features.mean(axis=0)
     mu_fake = fake_features.mean(axis=0)
-    var_real = jnp.cov(real_features, rowvar=False, bias=True) + eps * jnp.eye(real_features.shape[-1])
-    var_fake = jnp.cov(fake_features, rowvar=False, bias=True) + eps * jnp.eye(fake_features.shape[-1])
+    var_real = jnp.cov(real_features, rowvar=False) + eps * jnp.eye(real_features.shape[-1])
+    var_fake = jnp.cov(fake_features, rowvar=False) + eps * jnp.eye(fake_features.shape[-1])
 
     # Cholesky decomposition
     L_real = cholesky(var_real, lower=True)

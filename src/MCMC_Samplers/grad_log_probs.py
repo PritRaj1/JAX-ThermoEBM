@@ -23,10 +23,10 @@ def log_llood_fcn(z, x, t, GEN_params, GEN_fwd):
     """Compute log[ p_β(x | z)^t ] ∝ t * [ - (x - g(z))^2 / (2 * σ^2) ]"""
 
     g_z = GEN_fwd(GEN_params, z)
-    mse = optax.l2_loss(x, g_z)
+    mse = optax.l2_loss(x, g_z).sum()
     log_lkhood = - t * (mse) / (2 * pl_sig**2)
 
-    return log_lkhood.sum()
+    return log_lkhood
 
 ### Grad log probs ###
 def prior_grad_log(z, EBM_params, EBM_fwd):

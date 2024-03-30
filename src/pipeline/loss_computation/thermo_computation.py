@@ -5,7 +5,7 @@ from jax.numpy.linalg import det, inv
 from functools import partial
 import configparser
 
-from src.pipeline.loss_computation.loss_helper_fcns import mean_GENloss
+from src.pipeline.loss_computation.loss_helper_fcns import mean_GENloss, llhood
 from src.MCMC_Samplers.sample_distributions import sample_posterior
 
 parser = configparser.ConfigParser()
@@ -23,27 +23,47 @@ batched_posterior = jax.vmap(
 )
 
 
-def KL_div(z1, z2, eps=1e-8, ridge=1e-5):
-    """Analytic solution for KL Divergence between power posteriors, assuming multivariate Gaussians."""
-    m1 = jnp.mean(z1, axis=0)
-    m2 = jnp.mean(z2, axis=0)
-    var1 = jnp.cov(z1, rowvar=False) + ridge * jnp.eye(z_channels)
-    var2 = jnp.cov(z2, rowvar=False) + ridge * jnp.eye(z_channels)
+# def KL_div(z1, z2, eps=1e-8, ridge=1e-5):
+#     """Analytic solution for KL Divergence between power posteriors, assuming multivariate Gaussians."""
+#     m1 = jnp.mean(z1, axis=0)
+#     m2 = jnp.mean(z2, axis=0)
+#     var1 = jnp.cov(z1, rowvar=False) + ridge * jnp.eye(z_channels)
+#     var2 = jnp.cov(z2, rowvar=False) + ridge * jnp.eye(z_channels)
 
-    KL_div = 0.5 * (
-        jnp.log((det(var2) + eps) / (det(var1) + eps))
-        + jnp.trace(inv(var2) @ var1)
-        + (m1 - m2).T @ inv(var2) @ (m1 - m2)
-        - z_channels
-    )
-
-    return KL_div
+#     KL_div = 0.5 * (
+#         jnp.log((det(var2) + eps) / (det(var1) + eps))
+#         + jnp.trace(inv(var2) @ var1)
+#         + (m1 - m2).T @ inv(var2) @ (m1 - m2)
+#         - z_channels
+#     )
 
 
-def get_KL_bias(z_prev, z_curr):
-    """Returns the KL divergence bias term between two adjacent temperatures."""
+#     return KL_div
 
-    return KL_div(z_prev, z_curr) - KL_div(z_curr, z_prev)
+
+# def get_KL_bias(z_prev, z_curr):
+#     """Returns the KL divergence bias term between two adjacent temperatures."""
+
+#     return KL_div(z_prev, z_curr) - KL_div(z_curr, z_prev)
+
+def get_KL_bias(z_prev, z_curr, t_prev, t_curr, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
+    get_llhood = lambda x_single, z_single, t: t * llhood(x_single, z_single, GEN_params, GEN_fwd) + EBM_fwd(EBM_params, z_single).sum()
+    batch_llhood = jax.vmap(get_llhood, in_axes=(0, 0, None))
+
+    def logpdf(z, t):
+        value = batch_llhood(x, z, t)
+        return value - jax.scipy.special.logsumexp(value, axis=0)
+
+
+    # Sample z' ~ p(z|t_{i-1}) and find the resulting log(p(x|z',t) evaluations
+    # E_{p(z|t_{i-1})}[ log(p(x|z,t_{i-1})) - log(p(x|z,t_i)) ]
+    KL_high = (logpdf(z_prev, t_prev) - logpdf(z_prev, t_curr)).mean()
+
+    # Sample z'' ~ p(z|t_i) and find the resulting log(p(x|z'',t) evaluations
+    # E_{p(z|t_i)}[ log(p(x|z,t_i)) - log(p(x|z,t_{i-1})) ]
+    KL_low = (logpdf(z_curr, t_curr) - logpdf(z_curr, t_prev)).mean()
+
+    return KL_high - KL_low
 
 
 if include_bias:
@@ -76,14 +96,13 @@ def thermo_scan_loop(carry, t, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
         key, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd
     )
     current_loss = mean_GENloss(x, z_posterior, GEN_params, GEN_fwd)
-    z_posterior = z_posterior.squeeze()
 
     # ∇T = t_i - t_{i-1}
     delta_T = t - t_prev
 
     # ((L(t_i) + L(t_{i-1})) * ∇T) + (KL[z_{i-1} || z_i] - KL[z_i || z_{i-1}])
     temperature_loss = (current_loss + prev_loss) * delta_T + get_bias(
-        prev_z, z_posterior
+        prev_z, z_posterior, t_prev, t, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd
     ) * keep_KL  # Do not include KL divergence in first iter, (area is 0 between t=0 and t=0)
 
     # Push tempered loss to the stack and carry over the current state
@@ -131,7 +150,7 @@ def thermo_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     # Scan along each temperature and stack the losses
     z_init = get_batched_posterior(
         key, x, 0.0, EBM_params, GEN_params, EBM_fwd, GEN_fwd
-    )[1].squeeze()
+    )[1]
     initial_state = (key, 0.0, 0.0, z_init, 0)
     (_, _, _, _, _), temp_losses = scan(
         f=scan_loss, init=initial_state, xs=temp_schedule
