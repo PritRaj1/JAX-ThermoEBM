@@ -1,6 +1,7 @@
 import os
 
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.95"
+# os.environ["JAX_DISABLE_JIT"] = "True"
 
 import numpy as np
 import torch
