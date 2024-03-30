@@ -46,14 +46,21 @@ batched_posterior = jax.vmap(
 
 #     return KL_div(z_prev, z_curr) - KL_div(z_curr, z_prev)
 
-def get_KL_bias(z_prev, z_curr, t_prev, t_curr, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
-    get_llhood = lambda x_single, z_single, t: t * llhood(x_single, z_single, GEN_params, GEN_fwd) + EBM_fwd(EBM_params, z_single).sum()
-    batch_llhood = jax.vmap(get_llhood, in_axes=(0, 0, None))
+
+def get_llhood(x, z, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
+    return t * llhood(x, z, GEN_params, GEN_fwd) + EBM_fwd(EBM_params, z).sum()
+
+
+batch_llhood = jax.vmap(get_llhood, in_axes=(0, 0, None, None, None, None, None))
+
+
+def get_KL_bias(
+    z_prev, z_curr, t_prev, t_curr, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd
+):
 
     def logpdf(z, t):
-        value = batch_llhood(x, z, t)
+        value = batch_llhood(x, z, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
         return value - jax.scipy.special.logsumexp(value, axis=0)
-
 
     # Sample z' ~ p(z|t_{i-1}) and find the resulting log(p(x|z',t) evaluations
     # E_{p(z|t_{i-1})}[ log(p(x|z,t_{i-1})) - log(p(x|z,t_i)) ]
