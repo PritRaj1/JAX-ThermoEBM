@@ -1,4 +1,5 @@
 import os
+
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.95"
 
 import numpy as np
@@ -36,4 +37,3 @@ os.makedirs(f"{log_path}/images", exist_ok=True)
 
 for exp in tqdm.tqdm(range(num_exp)):
     run_experiment(exp, train_x, val_x, log_path)
-

@@ -62,7 +62,7 @@ def posterior_grad_log(z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     - GEN_fwd: generator forward pass, --immutable
 
     Returns:
-    - ∇_z( log[p_θ(z | x)] ) ∝ ∇_z( log[p(x | z)^t * p(z)] )
+    - ∇_z( log[p_θ(z | x)] ) ∝ ∇_z( log[p_β(x | z)^t * p_α(z)] )
     """
 
     grad_log_llood = jax.grad(log_llood_fcn, argnums=0)(z, x, t, GEN_params, GEN_fwd)

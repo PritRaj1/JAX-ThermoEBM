@@ -1,8 +1,7 @@
 import jax
 import jax.numpy as jnp
-from jax.nn import softmax, log_softmax
 from jax.lax import scan
-from optax import kl_divergence as kl_div
+from jax.numpy.linalg import det, inv
 from functools import partial
 import configparser
 
@@ -16,14 +15,47 @@ batch_size = int(parser["PIPELINE"]["BATCH_SIZE"])
 z_channels = int(parser["EBM"]["Z_CHANNELS"])
 temp_power = float(parser["TEMP"]["TEMP_POWER"])
 num_temps = int(parser["TEMP"]["NUM_TEMPS"])
+include_bias = bool(parser["TEMP"]["INCLUDE_BIAS"])
+
 temp_schedule = jnp.linspace(0, 1, num_temps) ** temp_power
 batched_posterior = jax.vmap(
     sample_posterior, in_axes=(0, 0, None, None, None, None, None)
 )
 
 
+def KL_div(z1, z2, eps=1e-8):
+    """Analytic solution for KL Divergence between power posteriors, assuming multivariate Gaussians."""
+    m1 = jnp.mean(z1, axis=0)
+    m2 = jnp.mean(z2, axis=0)
+    var1 = jnp.cov(z1, rowvar=False) 
+    var2 = jnp.cov(z2, rowvar=False) 
+
+    KL_div = 0.5 * (
+        jnp.log((det(var2) + eps) / (det(var1) + eps))
+        + jnp.trace(inv(var2) @ var1)
+        + (m1 - m2).T @ inv(var2) @ (m1 - m2)
+        - z_channels
+    )
+
+    return KL_div
+
+
+def get_KL_bias(z_prev, z_curr):
+    """Returns the KL divergence bias term between two adjacent temperatures."""
+    KL_high = KL_div(z_prev, z_curr)
+    KL_low = KL_div(z_curr, z_prev)
+
+    return KL_high - KL_low
+
+
+if include_bias:
+    get_bias = get_KL_bias
+else:
+    get_bias = lambda x, y: 0.0
+
+
 def get_batched_posterior(key, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
-    """Function to sample a batch from the posterior distribution at a given temperature."""
+    """Returns a batch of samples from the posterior distribution at a given temperature."""
 
     # Sample batch amount of z_posterior samples
     key_batch = jax.random.split(key, batch_size + 1)
@@ -36,7 +68,7 @@ def get_batched_posterior(key, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
 
 
 def thermo_scan_loop(carry, t, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
-    """Loop step to compute the GEN loss at one temperature."""
+    """Scan step to compute the expected llhood loss at one temperature."""
 
     # Parse the carry state
     key, t_prev, prev_loss, prev_z, keep_KL = carry
@@ -52,10 +84,9 @@ def thermo_scan_loop(carry, t, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     delta_T = t - t_prev
 
     # ((L(t_i) + L(t_{i-1})) * ∇T) + (KL[z_{i-1} || z_i] - KL[z_i || z_{i-1}])
-    temperature_loss = (current_loss + prev_loss) * delta_T + (
-        kl_div(log_softmax(prev_z), softmax(z_posterior)).sum(axis=-1)
-        - kl_div(log_softmax(z_posterior), softmax(prev_z)).sum(axis=-1)
-    ).sum() * keep_KL  # Do not include KL divergence in first iter, (area is 0 between t=0 and t=0)
+    temperature_loss = (current_loss + prev_loss) * delta_T + get_bias(
+        prev_z, z_posterior
+    ) * keep_KL  # Do not include KL divergence in first iter, (area is 0 between t=0 and t=0)
 
     # Push tempered loss to the stack and carry over the current state
     return (key, t, current_loss, z_posterior, 1), temperature_loss
@@ -100,9 +131,9 @@ def thermo_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     )
 
     # Scan along each temperature and stack the losses
-    z_init = jnp.ones(
-        (batch_size, z_channels)
-    )  # Uniform distribution to ensure non-nan KL divergence
+    z_init = get_batched_posterior(
+        key, x, 0.0, EBM_params, GEN_params, EBM_fwd, GEN_fwd
+    )[1].squeeze()
     initial_state = (key, 0.0, 0.0, z_init, 0)
     (_, _, _, _, _), temp_losses = scan(
         f=scan_loss, init=initial_state, xs=temp_schedule

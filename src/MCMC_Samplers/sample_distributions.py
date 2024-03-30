@@ -41,7 +41,7 @@ def sample_prior(key, EBM_params, EBM_fwd):
 
     Returns:
     - key: PRNG key
-    - z: latent space variable sampled from p_a(x)
+    - z: latent space variable sampled from p_α(x)
     """
 
     # Wrap the langevin update function with constants for scanning
@@ -72,7 +72,7 @@ def sample_posterior(key, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
 
     Returns:
     - key: PRNG key
-    - z_samples: samples from the posterior distribution indexed by temperature
+    - z_samples: samples from the tempered posterior distribution, p_θ(z|x,t)
     """
 
     # Wrap the langevin update function with constants for scanning
