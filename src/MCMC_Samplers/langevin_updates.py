@@ -24,7 +24,7 @@ def langevin_prior(z, noise, EBM_params, EBM_fwd):
     z_{i+1} = z_i + s * ∇_z( log[p_α(x)] ) + ϵ * √(2s)
     """
 
-    grad_f = prior_grad_log(z, EBM_params, EBM_fwd) + (z / p0_sig**2)
+    grad_f = prior_grad_log(z, EBM_params, EBM_fwd)
     new_z = z + (prior_s * grad_f) + (noise * jnp.sqrt(2 * prior_s))
 
     return new_z, None
@@ -37,9 +37,7 @@ def langevin_posterior(z, noise, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
     z_{i+1} = z_i + s * ∇_z( log[p_β(x | z)^t * p_α(z)] ) + ϵ * √(2s)
     """
 
-    grad_f = posterior_grad_log(z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd) + (
-        z / p0_sig**2
-    )
+    grad_f = posterior_grad_log(z, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
     new_z = z + (posterior_s * grad_f) + (noise * jnp.sqrt(2 * posterior_s))
 
     return new_z, None

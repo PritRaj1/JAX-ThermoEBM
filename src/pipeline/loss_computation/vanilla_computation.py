@@ -1,3 +1,4 @@
+import jax
 import configparser
 
 from src.pipeline.loss_computation.loss_helper_fcns import mean_EBMloss, mean_GENloss
