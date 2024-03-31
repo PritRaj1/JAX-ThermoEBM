@@ -23,54 +23,54 @@ batched_posterior = jax.vmap(
 )
 
 
-# def KL_div(z1, z2, eps=1e-8, ridge=1e-5):
-#     """Analytic solution for KL Divergence between power posteriors, assuming multivariate Gaussians."""
-#     m1 = jnp.mean(z1, axis=0)
-#     m2 = jnp.mean(z2, axis=0)
-#     var1 = jnp.cov(z1, rowvar=False) + ridge * jnp.eye(z_channels)
-#     var2 = jnp.cov(z2, rowvar=False) + ridge * jnp.eye(z_channels)
+def KL_div(z1, z2, eps=1e-8, ridge=1e-5):
+    """Analytic solution for KL Divergence between power posteriors, assuming multivariate Gaussians."""
+    m1 = jnp.mean(z1, axis=0)
+    m2 = jnp.mean(z2, axis=0)
+    var1 = jnp.cov(z1, rowvar=False) + ridge * jnp.eye(z_channels)
+    var2 = jnp.cov(z2, rowvar=False) + ridge * jnp.eye(z_channels)
 
-#     KL_div = 0.5 * (
-#         jnp.log((det(var2) + eps) / (det(var1) + eps))
-#         + jnp.trace(inv(var2) @ var1)
-#         + (m1 - m2).T @ inv(var2) @ (m1 - m2)
-#         - z_channels
-#     )
-
-
-#     return KL_div
+    KL_div = 0.5 * (
+        jnp.log((det(var2) + eps) / (det(var1) + eps))
+        + jnp.trace(inv(var2) @ var1)
+        + (m1 - m2).T @ inv(var2) @ (m1 - m2)
+        - z_channels
+    )
 
 
-# def get_KL_bias(z_prev, z_curr):
-#     """Returns the KL divergence bias term between two adjacent temperatures."""
-
-#     return KL_div(z_prev, z_curr) - KL_div(z_curr, z_prev)
+    return KL_div
 
 
-def get_llhood(x, z, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
-    return t * llhood(x, z, GEN_params, GEN_fwd) + EBM_fwd(EBM_params, z).sum()
+def get_KL_bias(z_prev, z_curr):
+    """Returns the KL divergence bias term between two adjacent temperatures."""
+
+    return KL_div(z_prev, z_curr) - KL_div(z_curr, z_prev)
 
 
-batch_llhood = jax.vmap(get_llhood, in_axes=(0, 0, None, None, None, None, None))
+# def get_llhood(x, z, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
+#     return t * llhood(x, z, GEN_params, GEN_fwd) + EBM_fwd(EBM_params, z).sum()
 
 
-def get_KL_bias(
-    z_prev, z_curr, t_prev, t_curr, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd
-):
+# batch_llhood = jax.vmap(get_llhood, in_axes=(0, 0, None, None, None, None, None))
 
-    def logpdf(z, t):
-        value = batch_llhood(x, z, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
-        return value - jax.scipy.special.logsumexp(value, axis=0)
 
-    # Sample z' ~ p(z|t_{i-1}) and find the resulting log(p(x|z',t) evaluations
-    # E_{p(z|t_{i-1})}[ log(p(x|z,t_{i-1})) - log(p(x|z,t_i)) ]
-    KL_high = (logpdf(z_prev, t_prev) - logpdf(z_prev, t_curr)).mean()
+# def get_KL_bias(
+#     z_prev, z_curr, t_prev, t_curr, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd
+# ):
 
-    # Sample z'' ~ p(z|t_i) and find the resulting log(p(x|z'',t) evaluations
-    # E_{p(z|t_i)}[ log(p(x|z,t_i)) - log(p(x|z,t_{i-1})) ]
-    KL_low = (logpdf(z_curr, t_curr) - logpdf(z_curr, t_prev)).mean()
+#     def logpdf(z, t):
+#         value = batch_llhood(x, z, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
+#         return value - jax.scipy.special.logsumexp(value, axis=0)
 
-    return KL_high - KL_low
+#     # Sample z' ~ p(z|t_{i-1}) and find the resulting log(p(x|z',t) evaluations
+#     # E_{p(z|t_{i-1})}[ log(p(x|z,t_{i-1})) - log(p(x|z,t_i)) ]
+#     KL_high = (logpdf(z_prev, t_prev) - logpdf(z_prev, t_curr)).mean()
+
+#     # Sample z'' ~ p(z|t_i) and find the resulting log(p(x|z'',t) evaluations
+#     # E_{p(z|t_i)}[ log(p(x|z,t_i)) - log(p(x|z,t_{i-1})) ]
+#     KL_low = (logpdf(z_curr, t_curr) - logpdf(z_curr, t_prev)).mean()
+
+#     return KL_high - KL_low
 
 
 if include_bias:
