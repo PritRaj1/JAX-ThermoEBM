@@ -174,9 +174,9 @@ def run_experiment(exp_num, train_x, val_x, log_path):
                 + r"$\overline{MIFID}_\infty$: "
                 + f"{mifid_inf:.4g}, "
                 + r"$\overline{KID}_\infty$: "
-                + f"{kid_inf:.4g}, "
-                + r"$\overline{IS}_\infty$: "
-                + f"{is_inf:.4g}"
+                + f"{kid_inf:.4g}"
+                # + r"$\overline{IS}_\infty$: "
+                # + f"{is_inf:.4g}"
             )
             plt.tight_layout()
             plt.savefig(f"{log_path}/images/{epoch}.png", dpi=750)

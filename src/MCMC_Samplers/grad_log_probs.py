@@ -41,7 +41,6 @@ def prior_grad_log(z, EBM_params, EBM_fwd):
     - ∇_z( log[p_α(x)] )
     """
 
-    
     return jax.grad(log_prior_fcn, argnums=0)(z, EBM_params, EBM_fwd)
 
 

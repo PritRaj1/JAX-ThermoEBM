@@ -1,9 +1,6 @@
-import jax
 import jax.numpy as jnp
 from jax.numpy.linalg import det, inv
 import configparser
-
-from src.MCMC_Samplers.grad_log_probs import log_llood_fcn, log_prior_fcn
 
 parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")
@@ -29,41 +26,9 @@ def KL_div(z1, z2, eps=1e-8, ridge=1e-5):
     return KL_div
 
 
-def analytic_KL_bias(
-    z_prev, z_curr, t_prev, t_curr, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd
-):
+def analytic_KL_bias(z_prev, z_curr):
     """Returns the KL divergence bias term between two adjacent temperatures."""
 
     z_prev = z_prev.squeeze()
     z_curr = z_curr.squeeze()
     return KL_div(z_prev, z_curr) - KL_div(z_curr, z_prev)
-
-
-def get_log_posterior(x, z, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
-    return (
-        log_llood_fcn(z, x, t, GEN_params, GEN_fwd)
-        + log_prior_fcn(z, EBM_params, EBM_fwd)
-    )
-
-
-batch_log_post = jax.vmap(
-    get_log_posterior, in_axes=(0, 0, None, None, None, None, None)
-)
-
-
-def inferred_KL_bias(
-    z_prev, z_curr, t_prev, t_curr, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd
-):
-
-    def logpdf(z, t):
-        return batch_log_post(x, z, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
-
-    # Sample z' ~ p(z|t_{i-1}) and find the resulting log(p(x|z',t) evaluations
-    # E_{p(z|t_{i-1})}[ log(p(x|z,t_{i-1})) - log(p(x|z,t_i)) ]
-    KL_high = (logpdf(z_prev, t_prev) - logpdf(z_prev, t_curr)).mean()
-
-    # Sample z'' ~ p(z|t_i) and find the resulting log(p(x|z'',t) evaluations
-    # E_{p(z|t_i)}[ log(p(x|z,t_i)) - log(p(x|z,t_{i-1})) ]
-    KL_low = (logpdf(z_curr, t_curr) - logpdf(z_curr, t_prev)).mean()
-
-    return KL_high - KL_low
