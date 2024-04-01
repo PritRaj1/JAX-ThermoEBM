@@ -16,6 +16,7 @@ def log_prior_fcn(z, EBM_params, EBM_fwd):
     """Compute log(p(z)) ∝ f(z) - 0.5 * (z^2) / (σ^2)"""
 
     f_z = EBM_fwd(EBM_params, z) - 0.5 * (z**2) / (p0_sig**2)
+    f_z -= jax.scipy.special.logsumexp(f_z)
     return f_z.sum() # log(p(z)) = log(p(z1)) + log(p(z2)) + ... + log(p(zN))
 
 def log_llood_fcn(z, x, t, GEN_params, GEN_fwd):
@@ -24,6 +25,7 @@ def log_llood_fcn(z, x, t, GEN_params, GEN_fwd):
     g_z = GEN_fwd(GEN_params, z)
     sqr_err = (x - g_z)**2
     log_lkhood = - t * (sqr_err) / (2 * pl_sig**2)
+    log_lkhood -= jax.scipy.special.logsumexp(log_lkhood)
     return log_lkhood.sum() # log(p(x | z)) = log(p(x1 | z)) + log(p(x2 | z)) + ... + log(p(xN | z))
 
 ### Grad log probs ###
