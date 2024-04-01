@@ -4,12 +4,12 @@ import optax
 
 
 df = pd.read_csv("logs/CelebA/p=0/batch=100/experiment0.csv")
-df2 = pd.read_csv("logs/CelebA/p=1/batch=100/experiment0.csv")
+# df2 = pd.read_csv("logs/CelebA/p=1/batch=100/experiment0.csv")
 
 # Plot df["Train Loss"]
 plt.figure()
-plt.plot(df["KID_inf"], label="p=0")
-plt.plot(df2["KID_inf"], label="p=1")
+plt.plot(df["Train Loss"], label="p=0")
+# plt.plot(df2["KID_inf"], label="p=1")
 plt.legend()
 plt.xlabel("Epoch")
 plt.ylabel("Train Loss")

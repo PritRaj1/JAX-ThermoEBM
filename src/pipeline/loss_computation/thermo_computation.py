@@ -5,7 +5,7 @@ from functools import partial
 import configparser
 
 from src.pipeline.loss_computation.loss_helper_fcns import mean_GENloss
-from src.pipeline.loss_computation.thermo_KL import analytic_KL_bias
+from src.pipeline.loss_computation.thermo_KL import analytic_KL_bias, inferred_KL_bias
 from src.MCMC_Samplers.sample_distributions import sample_posterior
 
 parser = configparser.ConfigParser()
@@ -15,7 +15,7 @@ batch_size = int(parser["PIPELINE"]["BATCH_SIZE"])
 z_channels = int(parser["EBM"]["Z_CHANNELS"])
 temp_power = float(parser["TEMP"]["TEMP_POWER"])
 num_temps = int(parser["TEMP"]["NUM_TEMPS"])
-include_bias = bool(parser["TEMP"]["INCLUDE_BIAS"])
+include_bias = str(parser["TEMP"]["INCLUDE_BIAS"])
 
 temp_schedule = jnp.linspace(0, 1, num_temps) ** temp_power
 batched_posterior = jax.vmap(
@@ -23,10 +23,12 @@ batched_posterior = jax.vmap(
 )
 
 # Determine which bias term to use
-if include_bias:
+if include_bias == "analytic":
     get_bias = analytic_KL_bias
+elif include_bias == "inferred":
+    get_bias = inferred_KL_bias
 else:
-    get_bias = lambda x, y: 0.0
+    get_bias = lambda *args: 0.0
 
 
 def batch_sample_posterior(key, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
@@ -59,7 +61,7 @@ def thermo_scan_loop(carry, t, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
 
     # ((L(t_i) + L(t_{i-1})) * ∇T) + (KL[z_{i-1} || z_i] - KL[z_i || z_{i-1}])
     temperature_loss = (current_loss + prev_loss) * delta_T + get_bias(
-        prev_z, z_posterior
+        prev_z, z_posterior, t_prev, t, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd
     ) * keep_KL  # Do not include KL divergence in first iter, (area is 0 between t=0 and t=0)
 
     # Push tempered loss to the stack and carry over the current state
