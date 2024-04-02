@@ -34,11 +34,6 @@ def sample_prior(key, EBM_params, EBM_fwd):
     """
     Sample from the exponentially-tilted prior distribution.
 
-    Args:
-    - key: PRNG key
-    - EBM_params: energy-based model parameters
-    - EBM_fwd: energy-based model forward pass, --immutable
-
     Returns:
     - key: PRNG key
     - z: latent space variable sampled from p_α(x)
@@ -60,15 +55,6 @@ def sample_prior(key, EBM_params, EBM_fwd):
 def sample_posterior(key, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     """
     Sample from the posterior distribution.
-
-    Args:
-    - key: PRNG key
-    - x: data samples
-    - t: current temperature
-    - EBM_params: energy-based model parameters
-    - GEN_params: generator parameters
-    - EBM_fwd: energy-based model forward pass, --immutable
-    - GEN_fwd: generator forward pass, --immutable
 
     Returns:
     - key: PRNG key

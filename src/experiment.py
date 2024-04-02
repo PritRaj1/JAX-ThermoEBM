@@ -84,8 +84,8 @@ def run_experiment(exp_num, train_x, val_x, log_path):
     def val_batches(carry, x, params_tup):
         """Batch validation fcn for scanning."""
         key = carry
-        key, loss, grad, var = jit_val_step(key, x, params_tup)
-        return (key), (loss, grad, var)
+        key, loss = jit_val_step(key, x, params_tup)
+        return key, loss
 
     img_evolution = np.zeros(
         (num_epochs // save_every, val_x.shape[-3], val_x.shape[-2], val_x.shape[-1])
@@ -98,8 +98,6 @@ def run_experiment(exp_num, train_x, val_x, log_path):
             "Train Grad",
             "Train Grad Var",
             "Val Loss",
-            "Val Grad",
-            "Val Grad Var",
             "FID_inf",
             "MIFID_inf",
             "KID_inf",
@@ -121,13 +119,11 @@ def run_experiment(exp_num, train_x, val_x, log_path):
         train_grad_var = train_grad_var.mean()
 
         # Validate
-        key, (val_loss, val_grad, val_grad_var) = jax.lax.scan(
+        key, val_loss= jax.lax.scan(
             f=partial(val_batches, params_tup=params_tup), init=key, xs=val_x
         )
 
         val_loss = val_loss.mean()
-        val_grad = val_grad.mean()
-        val_grad_var = val_grad_var.mean()
 
         # Profile generative capacity using unbiased metrics
         key, fid_inf, mifid_inf, kid_inf, is_inf, four_real, four_fake = jit_metrics_fcn(key, params_tup)
@@ -140,8 +136,6 @@ def run_experiment(exp_num, train_x, val_x, log_path):
                 "Train Grad": train_grad,
                 "Train Grad Var": train_grad_var,
                 "Val Loss": val_loss,
-                "Val Grad": val_grad,
-                "Val Grad Var": val_grad_var,
                 "FID_inf": fid_inf,
                 "MIFID_inf": mifid_inf,
                 "KID_inf": kid_inf,

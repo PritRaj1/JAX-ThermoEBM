@@ -16,6 +16,7 @@ prior_s = float(parser["MCMC"]["E_STEP_SIZE"])
 posterior_steps = int(parser["MCMC"]["G_SAMPLE_STEPS"])
 posterior_s = float(parser["MCMC"]["G_STEP_SIZE"])
 
+
 @partial(jax.jit, static_argnums=3)
 def langevin_prior(z, noise, EBM_params, EBM_fwd):
     """
