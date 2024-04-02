@@ -5,7 +5,6 @@ import configparser
 
 from src.MCMC_Samplers.sample_distributions import sample_posterior, sample_prior
 from src.MCMC_Samplers.log_pdfs import log_llood_fcn, log_prior_fcn
-from src.MCMC_Samplers.grad_log_probs import sum_llhood
 
 parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")
@@ -35,6 +34,7 @@ def batch_sample_posterior(key, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
 
 def prior_norm(key, EBM_params, EBM_fwd):
     """Returns the normalisation constant for the prior distribution."""
+
     key, z = sample_prior(key, EBM_params, EBM_fwd)
     return log_prior_fcn(z, EBM_params, EBM_fwd).sum()
 
@@ -42,45 +42,49 @@ def prior_norm(key, EBM_params, EBM_fwd):
 get_priors = jax.vmap(prior_norm, in_axes=(0, None, None))
 
 
-def marginal_llhood(x, z, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
+def llhood(z, x, t, GEN_params, GEN_fwd):
+    """Returns the log-likelihood of the generator model for one sample."""
+    
+    llhood = log_llood_fcn(z, x, t, GEN_params, GEN_fwd)
+    llhood -= jax.scipy.special.logsumexp(stop_gradient(llhood)) # Normalisation is not parameter dependent, required to compare TI and Vanilla
+    return llhood.sum() # log[ p_β(x|z,t) ] = log[ p_β(x1|z1,t) ] + log[ p_β(x2|z2,t) ] + ... + log[ p_β(xN|zN,t) ]
+
+
+def joint_dist(x, z, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     """
     Returns log[ p_β(x|z,t) ] + log[ p_α(z) ] - log[ Z_{θ,t} ]
 
-    If t=1 AND z ~ p(z|x,t=1), this is the value of the marginal logpdf.
+    If t=1 AND z ~ p(z|x,t=1), this is the value of the joint logpdf.
     If t>1, this is the value of the posterior logpdf at temperature t for a given z.
-    The normalisation is very costly, but we cannot call stop_gradient on it, since
-    Z_{θ,t} is parameter dependent. Without normalisation, it becomes difficult
-    to compare the marginal logpdfs between the TI and Vanilla losses.
 
-    Likelihood normalisation is not paramter dependent, but is dependent on t, so 
+    Likelihood normalisation is not paramter dependent, but is dependent on t, so
     we apply logsumexp with stop grad. Prior normalisation is conducted outside of this function.
     """
 
-    llhood = log_llood_fcn(z, x, t, GEN_params, GEN_fwd)
+    llhood = llhood(z, x, t, GEN_params, GEN_fwd)
     prior = log_prior_fcn(z, EBM_params, EBM_fwd)
-    llhood -= jax.scipy.special.logsumexp(stop_gradient(llhood))
-
-    return llhood.sum() + prior.sum()
+    return llhood + prior.sum()
 
 
-marginal = jax.vmap(marginal_llhood, in_axes=(0, 0, None, None, None, None, None))
-batched_sum_llhood = jax.vmap(sum_llhood, in_axes=(0, 0, None, None, None))
+joint_logpdf = jax.vmap(joint_dist, in_axes=(0, 0, None, None, None, None, None))
 
 
-def batched_marginal_llhood(key, x, z, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
-    logpdf = marginal(x, z, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
+def batched_joint_logpdf(key, x, z, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
+    logpdf = joint_logpdf(x, z, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
 
-    # Prior normalisation is parameter dependent = E_{z~p_α(z)}[ exp(f_α(z)) ], which is easier to track grads for than logsum.
-    keybatch = jax.random.split(key, batch_size+1)
+    # Prior normalisation is parameter dependent = E_{z~p_α(z)}[ exp(f_α(z)) ].
+    keybatch = jax.random.split(key, batch_size + 1)
     key, subkey_batch = keybatch[0], keybatch[1:]
     logpdf -= get_priors(subkey_batch, EBM_params, EBM_fwd).mean()
     return logpdf
 
 
+batched_llhood = jax.vmap(llhood, in_axes=(0, 0, None, None, None))
+
+
 def mean_llhood(x, z, GEN_params, GEN_fwd):
     """Returns the expected normalised log-likelihood of the generator model."""
 
-    # Untempered, therefore exact normalisation constant is feasible.
-    llhood = batched_sum_llhood(z, x, 1, GEN_params, GEN_fwd)
-    llhood -= 0.5 * m * jnp.log(2 * jnp.pi * pl_sigma**2)
+    # Untempered likelihood, E_{z~p_θ(z|x,t)}[ log(p_β(x|z)) ]
+    llhood = batched_llhood(z, x, 1.0, GEN_params, GEN_fwd)
     return llhood.mean()

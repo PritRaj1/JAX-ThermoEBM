@@ -1,7 +1,7 @@
 import jax
 import configparser
 
-from src.loss_computation.loss_helper_fcns import batched_marginal_llhood, batch_sample_posterior
+from src.loss_computation.loss_helper_fcns import batched_joint_logpdf, batch_sample_posterior
 
 parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")
@@ -13,5 +13,5 @@ def vanilla_loss(key, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
 
     key, z_posterior = batch_sample_posterior(key, x, 1, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
     key, subkey = jax.random.split(key)
-    llhood = batched_marginal_llhood(subkey, x, z_posterior, 1, EBM_params, GEN_params, EBM_fwd, GEN_fwd).mean()
+    llhood = batched_joint_logpdf(subkey, x, z_posterior, 1, EBM_params, GEN_params, EBM_fwd, GEN_fwd).mean()
     return -llhood, key
