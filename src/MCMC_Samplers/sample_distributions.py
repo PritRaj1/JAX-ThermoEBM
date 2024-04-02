@@ -10,11 +10,16 @@ parser.read("hyperparams.ini")
 
 p0_sig = float(parser["SIGMAS"]["p0_SIGMA"])
 z_channels = int(parser["EBM"]["Z_CHANNELS"])
-
 prior_steps = int(parser["MCMC"]["E_SAMPLE_STEPS"])
 prior_s = float(parser["MCMC"]["E_STEP_SIZE"])
 posterior_steps = int(parser["MCMC"]["G_SAMPLE_STEPS"])
 posterior_s = float(parser["MCMC"]["G_STEP_SIZE"])
+kill_gradient = bool(parser["PIPELINE"]["KILL_GRADIENT"])
+
+if kill_gradient:
+    final_sample_fcn = lambda x: stop_gradient(x)
+else:
+    final_sample_fcn = lambda x: x
 
 def sample_p0(key):
     """Sample from the noise prior distribution."""
@@ -49,7 +54,7 @@ def sample_prior(key, EBM_params, EBM_fwd):
     # Scan along the noise to iteratively update z
     z_prior, _ = scan(scan_MCMC, z0, noise, length=prior_steps)
 
-    return key, stop_gradient(z_prior)
+    return key, final_sample_fcn(z_prior)
 
 
 def sample_posterior(key, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
@@ -79,4 +84,4 @@ def sample_posterior(key, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     # Scan along the noise to iteratively update z
     z_posterior, _ = scan(scan_MCMC, z0, noise, length=posterior_steps)
 
-    return stop_gradient(z_posterior)
+    return final_sample_fcn(z_posterior)

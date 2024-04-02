@@ -1,4 +1,3 @@
-import jax
 import jax.numpy as jnp
 from jax.lax import scan
 from functools import partial

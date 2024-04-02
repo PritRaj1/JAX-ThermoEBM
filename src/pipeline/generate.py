@@ -1,5 +1,6 @@
 import jax
 import jax.numpy as jnp
+from jax.lax import stop_gradient
 from functools import partial
 from src.MCMC_Samplers.sample_distributions import sample_prior
 import configparser
@@ -15,7 +16,7 @@ def generate(key, _, params_tup, fwd_fcn_tup):
     """Generate a batch image from the generator."""
 
     key, z = sample_prior(key, params_tup[0], fwd_fcn_tup[0])
-    x_gen = fwd_fcn_tup[1](params_tup[1], z)
+    x_gen = fwd_fcn_tup[1](params_tup[1], stop_gradient(z))
 
     return key, x_gen
 

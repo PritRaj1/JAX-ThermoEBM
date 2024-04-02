@@ -9,7 +9,7 @@ p0_sig = float(parser["SIGMAS"]["p0_SIGMA"])
 z_channels = int(parser["EBM"]["Z_CHANNELS"])
 
 
-def KL_div(z1, z2, eps=1e-8, ridge=1e-6):
+def KL_div(z1, z2, eps=1e-8, ridge=1e-5):
     """Analytic solution for KL Divergence between power posteriors, assuming multivariate Gaussians."""
     m1 = jnp.mean(z1, axis=0)
     m2 = jnp.mean(z2, axis=0)
