@@ -61,9 +61,8 @@ def joint_dist(x, z, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     we apply logsumexp with stop grad. Prior normalisation is conducted outside of this function.
     """
 
-    llhood = llhood(z, x, t, GEN_params, GEN_fwd)
     prior = log_prior_fcn(z, EBM_params, EBM_fwd)
-    return llhood + prior.sum()
+    return llhood(z, x, t, GEN_params, GEN_fwd) + prior.sum()
 
 
 joint_logpdf = jax.vmap(joint_dist, in_axes=(0, 0, None, None, None, None, None))
