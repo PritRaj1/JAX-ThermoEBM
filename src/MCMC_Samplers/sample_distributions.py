@@ -14,7 +14,7 @@ prior_steps = int(parser["MCMC"]["E_SAMPLE_STEPS"])
 prior_s = float(parser["MCMC"]["E_STEP_SIZE"])
 posterior_steps = int(parser["MCMC"]["G_SAMPLE_STEPS"])
 posterior_s = float(parser["MCMC"]["G_STEP_SIZE"])
-kill_gradient = bool(parser["PIPELINE"]["KILL_GRADIENT"])
+kill_gradient = bool(parser["MCMC"]["KILL_GRADIENT"])
 
 if kill_gradient:
     final_sample_fcn = lambda x: stop_gradient(x)
