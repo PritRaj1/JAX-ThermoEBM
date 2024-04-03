@@ -1,9 +1,10 @@
+import jax
 import jax.numpy as jnp
 from jax.lax import scan
 from functools import partial
 import configparser
 
-from src.loss_computation.loss_helper_fcns import batch_sample_posterior, mean_llhood
+from src.loss_computation.loss_helper_fcns import batch_sample_posterior, llhood
 from src.loss_computation.thermo_KL import analytic_KL_bias
 
 parser = configparser.ConfigParser()
@@ -16,6 +17,7 @@ num_temps = int(parser["TEMP"]["NUM_TEMPS"])
 include_bias = bool(parser["TEMP"]["INCLUDE_BIAS"])
 
 temp_schedule = jnp.linspace(0, 1, num_temps) ** temp_power
+batched_llhood = jax.vmap(llhood, in_axes=(0, 0, None, None, None))
 
 # Determine which bias term to use
 if include_bias:
@@ -34,7 +36,7 @@ def thermo_scan_loop(carry, t, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     key, z_posterior = batch_sample_posterior(
         key, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd
     )
-    current_loss = mean_llhood(x, z_posterior, GEN_params, GEN_fwd)
+    current_loss = batched_llhood(z_posterior, x, 1.0, GEN_params, GEN_fwd).mean()
 
     # ∇T = t_i - t_{i-1}
     delta_T = t - t_prev

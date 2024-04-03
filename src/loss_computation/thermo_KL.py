@@ -1,6 +1,7 @@
 import jax.numpy as jnp
 from jax.scipy.linalg import det, inv
 import configparser
+from jax.nn import softmax
 
 parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")
@@ -31,4 +32,6 @@ def analytic_KL_bias(z_prev, z_curr):
 
     z_prev = z_prev.squeeze()
     z_curr = z_curr.squeeze()
+    z_prev = softmax(z_prev, axis=-1)
+    z_curr = softmax(z_curr, axis=-1)
     return KL_div(z_prev, z_curr) - KL_div(z_curr, z_prev)

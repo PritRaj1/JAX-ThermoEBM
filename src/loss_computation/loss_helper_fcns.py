@@ -36,7 +36,7 @@ def prior_norm(key, EBM_params, EBM_fwd):
     """Returns the normalisation constant for the prior distribution."""
 
     key, z = sample_p0(key)
-    return log_prior_fcn(z, EBM_params, EBM_fwd).sum()
+    return jnp.exp(EBM_fwd(EBM_params, z))
 
 
 get_priors = jax.vmap(prior_norm, in_axes=(0, None, None))
@@ -50,7 +50,7 @@ def llhood(z, x, t, GEN_params, GEN_fwd):
     return llhood.sum() # log[ p_β(x|z,t) ] = log[ p_β(x1|z1,t) ] + log[ p_β(x2|z2,t) ] + ... + log[ p_β(xN|zN,t) ]
 
 
-def joint_dist(x, z, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
+def joint_dist(x, z, t, prior_normaliser, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     """
     Returns log[ p_β(x|z,t) ] + log[ p_α(z) ] - log[ Z_{θ,t} ]
 
@@ -61,29 +61,23 @@ def joint_dist(x, z, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     we apply logsumexp with stop grad. Prior normalisation is conducted outside of this function.
     """
 
-    prior = log_prior_fcn(z, EBM_params, EBM_fwd)
+    prior = log_prior_fcn(z, EBM_params, EBM_fwd) - prior_normaliser
     return llhood(z, x, t, GEN_params, GEN_fwd) + prior.sum()
 
 
-joint_logpdf = jax.vmap(joint_dist, in_axes=(0, 0, None, None, None, None, None))
+joint_logpdf = jax.vmap(joint_dist, in_axes=(0, 0, None, None, None, None, None, None))
 
 
 def batched_joint_logpdf(key, x, z, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
-    logpdf = joint_logpdf(x, z, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
 
     # Prior normalisation is parameter dependent = E_{z~p_α(z)}[ exp(f_α(z)) ].
     keybatch = jax.random.split(key, batch_size + 1)
     key, subkey_batch = keybatch[0], keybatch[1:]
-    logpdf -= get_priors(subkey_batch, EBM_params, EBM_fwd).mean()
+    prior_normaliser = jnp.log(get_priors(subkey_batch, EBM_params, EBM_fwd).mean(axis=0))
+    logpdf = joint_logpdf(x, z, t, prior_normaliser, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
+
     return logpdf
 
 
-batched_llhood = jax.vmap(llhood, in_axes=(0, 0, None, None, None))
 
 
-def mean_llhood(x, z, GEN_params, GEN_fwd):
-    """Returns the expected normalised log-likelihood of the generator model."""
-
-    # Untempered likelihood, E_{z~p_θ(z|x,t)}[ log(p_β(x|z)) ]
-    llhood = batched_llhood(z, x, 1.0, GEN_params, GEN_fwd)
-    return llhood.mean()
