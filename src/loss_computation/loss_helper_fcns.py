@@ -44,10 +44,14 @@ get_priors = jax.vmap(prior_norm, in_axes=(0, None, None))
 
 def llhood(z, x, t, GEN_params, GEN_fwd):
     """Returns the log-likelihood of the generator model for one sample."""
-    
+
     llhood = log_llood_fcn(z, x, t, GEN_params, GEN_fwd)
-    llhood -= jax.scipy.special.logsumexp(stop_gradient(llhood)) # Normalisation is not parameter dependent, required to compare TI and Vanilla
-    return llhood.sum() # log[ p_β(x|z,t) ] = log[ p_β(x1|z1,t) ] + log[ p_β(x2|z2,t) ] + ... + log[ p_β(xN|zN,t) ]
+    llhood -= jax.scipy.special.logsumexp(
+        stop_gradient(llhood)
+    )  # Normalisation is not parameter dependent, required to compare TI and Vanilla
+    return (
+        llhood.sum()
+    )  # log[ p_β(x|z,t) ] = log[ p_β(x1|z1,t) ] + log[ p_β(x2|z2,t) ] + ... + log[ p_β(xN|zN,t) ]
 
 
 def joint_dist(x, z, t, prior_normaliser, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
@@ -62,6 +66,7 @@ def joint_dist(x, z, t, prior_normaliser, EBM_params, GEN_params, EBM_fwd, GEN_f
     """
 
     prior = log_prior_fcn(z, EBM_params, EBM_fwd) - prior_normaliser
+    prior -= jax.scipy.special.logsumexp(stop_gradient(prior))  # None-param dependent normalisation
     return llhood(z, x, t, GEN_params, GEN_fwd) + prior.sum()
 
 
@@ -73,11 +78,11 @@ def batched_joint_logpdf(key, x, z, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
     # Prior normalisation is parameter dependent = E_{z~p_α(z)}[ exp(f_α(z)) ].
     keybatch = jax.random.split(key, batch_size + 1)
     key, subkey_batch = keybatch[0], keybatch[1:]
-    prior_normaliser = jnp.log(get_priors(subkey_batch, EBM_params, EBM_fwd).mean(axis=0))
-    logpdf = joint_logpdf(x, z, t, prior_normaliser, EBM_params, GEN_params, EBM_fwd, GEN_fwd)
+    prior_normaliser = jnp.log(
+        get_priors(subkey_batch, EBM_params, EBM_fwd).mean(axis=0)
+    )
+    logpdf = joint_logpdf(
+        x, z, t, prior_normaliser, EBM_params, GEN_params, EBM_fwd, GEN_fwd
+    )
 
     return logpdf
-
-
-
-
