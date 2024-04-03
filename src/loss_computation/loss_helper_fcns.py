@@ -3,7 +3,7 @@ import jax.numpy as jnp
 from jax.lax import stop_gradient
 import configparser
 
-from src.MCMC_Samplers.sample_distributions import sample_posterior, sample_prior
+from src.MCMC_Samplers.sample_distributions import sample_posterior, sample_p0
 from src.MCMC_Samplers.log_pdfs import log_llood_fcn, log_prior_fcn
 
 parser = configparser.ConfigParser()
@@ -35,7 +35,7 @@ def batch_sample_posterior(key, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
 def prior_norm(key, EBM_params, EBM_fwd):
     """Returns the normalisation constant for the prior distribution."""
 
-    key, z = sample_prior(key, EBM_params, EBM_fwd)
+    key, z = sample_p0(key)
     return log_prior_fcn(z, EBM_params, EBM_fwd).sum()
 
 

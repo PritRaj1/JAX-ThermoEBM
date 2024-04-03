@@ -30,7 +30,7 @@ def thermo_scan_loop(carry, t, x, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
     # Parse the carry state
     key, t_prev, prev_loss, prev_z, keep_KL = carry
 
-    # Get liklihood, E_{z|x,t}[ log(p_β(x|z,t)) ]
+    # Get liklihood, E_{z|x,t}[ log(p_β(x|z)) ]
     key, z_posterior = batch_sample_posterior(
         key, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd
     )
