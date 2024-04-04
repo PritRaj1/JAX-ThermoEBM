@@ -1,4 +1,6 @@
 dataset/
 *.out
-images/
-*.png
+results/*png
+results/boxplots/*png
+results/evolutions/*png
+results/relationships/*png
