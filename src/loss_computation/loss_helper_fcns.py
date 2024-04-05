@@ -3,7 +3,7 @@ import jax.numpy as jnp
 from jax.lax import stop_gradient
 import configparser
 
-from src.MCMC_Samplers.sample_distributions import sample_posterior, sample_prior
+from src.MCMC_Samplers.sample_distributions import sample_posterior, sample_p0
 from src.MCMC_Samplers.log_pdfs import log_llood_fcn, log_prior_fcn
 
 parser = configparser.ConfigParser()
@@ -39,8 +39,8 @@ def batch_sample_posterior(key, x, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
 def prior_norm(key, EBM_params, EBM_fwd):
     """Returns the normalisation constant for the prior distribution."""
 
-    key, z = sample_prior(key, EBM_params, EBM_fwd)
-    return EBM_fwd(EBM_params, z)
+    key, z = sample_p0(key)
+    return jnp.exp(EBM_fwd(EBM_params, z))
 
 
 get_priors = jax.vmap(prior_norm, in_axes=(0, None, None))
@@ -75,10 +75,10 @@ joint_logpdf = jax.vmap(joint_dist, in_axes=(0, 0, None, None, None, None, None,
 
 def batched_joint_logpdf(key, x, z, t, EBM_params, GEN_params, EBM_fwd, GEN_fwd):
 
-    # Prior normalisation is parameter dependent = E_{z~p_α(z)}[ exp(f_α(z)) ].
+    # Prior normalisation is parameter dependent.
     keybatch = jax.random.split(key, batch_size + 1)
     key, subkey_batch = keybatch[0], keybatch[1:]
-    prior_normaliser = get_priors(subkey_batch, EBM_params, EBM_fwd).mean(axis=0)
+    prior_normaliser = jnp.log(get_priors(subkey_batch, EBM_params, EBM_fwd).mean(axis=0))
     
     logpdf = joint_logpdf(
         x, 
