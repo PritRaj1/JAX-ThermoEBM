@@ -10,7 +10,7 @@ pl_sig = float(parser["SIGMAS"]["LKHOOD_SIGMA"])
 
 
 def log_prior_fcn(z, EBM_params, EBM_fwd):
-    """Compute log(p_α(z)) ∝ f(z) - 0.5 * (z^2) / (σ^2) - log(Z_α)"""
+    """Compute log(p_α(z)) ∝ f(z) - 0.5 * (z^2) / (σ^2)"""
     return EBM_fwd(EBM_params, z) - 0.5 * (z**2) / (p0_sig**2)
 
 

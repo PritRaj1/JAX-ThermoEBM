@@ -8,8 +8,8 @@ df2 = pd.read_csv("logs/CelebA/p=1/batch=75/experiment0.csv")
 
 # Plot df["Train Loss"]
 plt.figure(figsize=(10, 6))
-plt.plot(df["Val Loss"], label="p=0")
-plt.plot(df2["Val Loss"], label="p=1")
+plt.plot(df["Train Loss"], label="p=0")
+plt.plot(df2["Train Loss"], label="p=1")
 plt.legend()
 plt.xlabel("Epoch")
 plt.ylabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p(\mathbf{x}|\theta))\right]$")
