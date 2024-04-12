@@ -29,7 +29,7 @@ plt.ylabel("Learning Rate")
 plt.title("Parameter update")
 plt.savefig("results/lr_schedule.png")
 
-p_list = [0, 0.3, 1, 3, 10]
+p_list = [0, 1, 3, 10]
 num_temps = 100
 
 plt.figure(figsize=(10, 6))
