@@ -147,12 +147,12 @@ plt.savefig(f"results/evolutions/mifid.png")
 
 # Plot boxplot of the final loss and metrics for each temperature
 for temp in TEMPS:
-    final_train_loss = dict_train_loss[temp].groupby('experiment').last()
-    final_train_grad_var = dict_train_grad_var[temp].groupby('experiment').last()
-    final_val_loss = dict_val_loss[temp].groupby('experiment').last()
-    final_fid = dict_val_fid[temp].groupby('experiment').last()
-    final_kid = dict_val_kid[temp].groupby('experiment').last()
-    final_mifid = dict_val_mifid[temp].groupby('experiment').last()
+    final_train_loss = dict_train_loss[temp].groupby('experiment').tail(5)
+    final_train_grad_var = dict_train_grad_var[temp].groupby('experiment').tail(5)
+    final_val_loss = dict_val_loss[temp].groupby('experiment').tail(5)
+    final_fid = dict_val_fid[temp].groupby('experiment').tail(5)
+    final_kid = dict_val_kid[temp].groupby('experiment').tail(5)
+    final_mifid = dict_val_mifid[temp].groupby('experiment').tail(5)
 
     final_train_loss['temp'] = f"p={temp}" if temp != 0 else "Vanilla Model"
     final_train_grad_var['temp'] = f"p={temp}" if temp != 0 else "Vanilla Model"
