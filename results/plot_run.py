@@ -12,7 +12,7 @@ sns.set(font_scale=1.1)
 sns.set_style("whitegrid", rc ={'text.usetex' : True, 'font.family' : 'serif', 'font.serif' : ['Computer Modern']})
 
 NUM_EXPERIMENTS = 5
-TEMPS = [0, 1, 3, 10]
+TEMPS = [0, 1, 3, 6, 10]
 BATCH_SIZE = 75
 
 dict_train_loss = {}
@@ -147,12 +147,12 @@ plt.savefig(f"results/evolutions/mifid.png")
 
 # Plot boxplot of the final loss and metrics for each temperature
 for temp in TEMPS:
-    final_train_loss = dict_train_loss[temp].groupby('experiment').tail(5)
-    final_train_grad_var = dict_train_grad_var[temp].groupby('experiment').tail(5)
-    final_val_loss = dict_val_loss[temp].groupby('experiment').tail(5)
-    final_fid = dict_val_fid[temp].groupby('experiment').tail(5)
-    final_kid = dict_val_kid[temp].groupby('experiment').tail(5)
-    final_mifid = dict_val_mifid[temp].groupby('experiment').tail(5)
+    final_train_loss = dict_train_loss[temp].groupby('experiment').last()#.tail(10)
+    final_train_grad_var = dict_train_grad_var[temp].groupby('experiment').last()#.tail(10)
+    final_val_loss = dict_val_loss[temp].groupby('experiment').last()#.tail(10)
+    final_fid = dict_val_fid[temp].groupby('experiment').last()#.tail(10)
+    final_kid = dict_val_kid[temp].groupby('experiment').last()#.tail(10)
+    final_mifid = dict_val_mifid[temp].groupby('experiment').last()#.tail(10)
 
     final_train_loss['temp'] = f"p={temp}" if temp != 0 else "Vanilla Model"
     final_train_grad_var['temp'] = f"p={temp}" if temp != 0 else "Vanilla Model"
@@ -216,50 +216,65 @@ plt.savefig(f"results/boxplots/final_mifid.png")
 # Plot final fid against variance, with error bars
 fid_var = pd.merge(all_final_train_grad_var, all_final_fid, on=['experiment', 'temp'])
 
-plt.figure(figsize=(10, 6))
+plt.figure(figsize=(14, 6))
+reg_points = []
 for temp in TEMPS:
     label = r'p=' + f'{temp}' if temp != 0 else r'Vanilla Model'
-    mean_fid = fid_var[fid_var['temp'] == label]['FID_inf'].mean()
-    std_fid = fid_var[fid_var['temp'] == label]['FID_inf'].std()
-    mean_var = fid_var[fid_var['temp'] == label]['Train Grad Var'].mean()
-    std_var = fid_var[fid_var['temp'] == label]['Train Grad Var'].std()
-    plt.errorbar(mean_var, mean_fid, xerr=std_var, yerr=std_fid, capsize=2, marker='x', label=label)
+    plt.scatter(fid_var[fid_var['temp'] == label]['Train Grad Var'], fid_var[fid_var['temp'] == label]['FID_inf'], label=label, marker='x')
+    reg_points.append(fid_var[fid_var['temp'] == label][['Train Grad Var', 'FID_inf']])
+    # mean_fid = fid_var[fid_var['temp'] == label]['FID_inf'].mean()
+    # std_fid = fid_var[fid_var['temp'] == label]['FID_inf'].std()
+    # mean_var = fid_var[fid_var['temp'] == label]['Train Grad Var'].mean()
+    # std_var = fid_var[fid_var['temp'] == label]['Train Grad Var'].std()
+    # plt.errorbar(mean_var, mean_fid, xerr=std_var, yerr=std_fid, capsize=2, marker='x', label=label)
+sns.regplot(x='Train Grad Var', y='FID_inf', data=pd.concat(reg_points), scatter=False, label='Regression', order=2)
 plt.xlabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p(\mathbf{x}|\theta))\right]$")
 plt.ylabel(r"$\overline{FID}_\infty$")
-plt.title(f'Final ' + r"$\overline{FID}_\infty$" + ' against Validation Gradient Variance')
+# plt.xscale('log')
+plt.title(f'Final ' + r"$\overline{FID}_\infty$" + ' against Gradient Variance')
 plt.legend()
 plt.savefig(f"results/relationships/fid_var.png")
 
 # Plot final mifid against variance, with error bars
 mifid_var = pd.merge(all_final_train_grad_var, all_final_mifid, on=['experiment', 'temp'])
 
-plt.figure(figsize=(10, 6))
+plt.figure(figsize=(14, 6))
+reg_points = []
 for temp in TEMPS:
     label = r'p=' + f'{temp}' if temp != 0 else r'Vanilla Model'
-    mean_mifid = mifid_var[mifid_var['temp'] == label]['MIFID_inf'].mean()
-    std_mifid = mifid_var[mifid_var['temp'] == label]['MIFID_inf'].std()
-    mean_var = mifid_var[mifid_var['temp'] == label]['Train Grad Var'].mean()
-    std_var = mifid_var[mifid_var['temp'] == label]['Train Grad Var'].std()
-    plt.errorbar(mean_var, mean_mifid, xerr=std_var, yerr=std_mifid, fmt='x', label=label, capsize=2)
+    plt.scatter(mifid_var[mifid_var['temp'] == label]['Train Grad Var'], mifid_var[mifid_var['temp'] == label]['MIFID_inf'], label=label, marker='x')
+    reg_points.append(mifid_var[mifid_var['temp'] == label][['Train Grad Var', 'MIFID_inf']])
+    # mean_mifid = mifid_var[mifid_var['temp'] == label]['MIFID_inf'].mean()
+    # std_mifid = mifid_var[mifid_var['temp'] == label]['MIFID_inf'].std()
+    # mean_var = mifid_var[mifid_var['temp'] == label]['Train Grad Var'].mean()
+    # std_var = mifid_var[mifid_var['temp'] == label]['Train Grad Var'].std()
+    # plt.errorbar(mean_var, mean_mifid, xerr=std_var, yerr=std_mifid, fmt='x', label=label, capsize=2)
+sns.regplot(x='Train Grad Var', y='MIFID_inf', data=pd.concat(reg_points), scatter=False, label='Regression', order=2)
 plt.xlabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p(\mathbf{x}|\theta))\right]$")
 plt.ylabel(r"$\overline{MIFID}_\infty$")
-plt.title(f'Final ' + r"$\overline{MIFID}_\infty$" + ' against Validation Gradient Variance')
+# plt.xscale('log')
+plt.title(f'Final ' + r"$\overline{MIFID}_\infty$" + ' against Gradient Variance')
 plt.legend()
 plt.savefig(f"results/relationships/mifid_var.png")
 
 # Plot final kid against variance, with error bars
 kid_var = pd.merge(all_final_train_grad_var, all_final_kid, on=['experiment', 'temp'])
 
-plt.figure(figsize=(10, 6))
+plt.figure(figsize=(14, 6))
+reg_points = []
 for temp in TEMPS:
     label = r'p=' + f'{temp}' if temp != 0 else r'Vanilla Model'
-    mean_kid = kid_var[kid_var['temp'] == label]['KID_inf'].mean()
-    std_kid = kid_var[kid_var['temp'] == label]['KID_inf'].std()
-    mean_var = kid_var[kid_var['temp'] == label]['Train Grad Var'].mean()
-    std_var = kid_var[kid_var['temp'] == label]['Train Grad Var'].std()
-    plt.errorbar(mean_var, mean_kid, xerr=std_var, yerr=std_kid, label=label, capsize=2, marker='x')
+    plt.scatter(kid_var[kid_var['temp'] == label]['Train Grad Var'], kid_var[kid_var['temp'] == label]['KID_inf'], label=label, marker='x')
+    reg_points.append(kid_var[kid_var['temp'] == label][['Train Grad Var', 'KID_inf']])
+    # mean_kid = kid_var[kid_var['temp'] == label]['KID_inf'].mean()
+    # std_kid = kid_var[kid_var['temp'] == label]['KID_inf'].std()
+    # mean_var = kid_var[kid_var['temp'] == label]['Train Grad Var'].mean()
+    # std_var = kid_var[kid_var['temp'] == label]['Train Grad Var'].std()
+    # plt.errorbar(mean_var, mean_kid, xerr=std_var, yerr=std_kid, label=label, capsize=2, marker='x')
+sns.regplot(x='Train Grad Var', y='KID_inf', data=pd.concat(reg_points), scatter=False, label='Regression', order=2)
 plt.xlabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p(\mathbf{x}|\theta))\right]$")
 plt.ylabel(r"$\overline{KID}_\infty$")
-plt.title(f'Final ' + r"$\overline{KID}_\infty$" + ' against Validation Gradient Variance')
+# plt.xscale('log')
+plt.title(f'Final ' + r"$\overline{KID}_\infty$" + ' against Gradient Variance')
 plt.legend()
 plt.savefig(f"results/relationships/kid_var.png")
