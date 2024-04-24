@@ -1,7 +1,6 @@
 
 import jax.numpy as jnp
 import configparser
-from torchmetrics.image.kid import KernelInceptionDistance
 parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")
 
