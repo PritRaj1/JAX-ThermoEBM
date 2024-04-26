@@ -36,5 +36,5 @@ del val_loader, train_loader, train_data, val_data
 log_path = f"logs/{data_set_name}/p={temp_power}/batch={batch_size}"
 os.makedirs(f"{log_path}/images", exist_ok=True)
 
-for exp in tqdm.tqdm(range(0, num_exp)):
+for exp in tqdm.tqdm(range(2, num_exp)):
     run_experiment(exp, train_x, val_x, log_path)
