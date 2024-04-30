@@ -4,7 +4,7 @@ import pandas as pd
 import os
 import numpy as np
 
-DATA_NAME = 'SVHN'
+DATA_NAME = 'CIFAR10'
 
 os.makedirs(f"results/{DATA_NAME}/evolutions", exist_ok=True)
 os.makedirs(f"results/{DATA_NAME}/boxplots", exist_ok=True)
@@ -15,7 +15,7 @@ sns.set(font_scale=1.1)
 sns.set_style("whitegrid", rc ={'text.usetex' : True, 'font.family' : 'serif', 'font.serif' : ['Computer Modern']})
 
 NUM_EXPERIMENTS = 5
-TEMPS = [0, 1, 3, 6, 10]
+TEMPS = [0, 1, 3, 10]
 BATCH_SIZE = 75
 OTHER_BATCHES = [25, 50]
 
