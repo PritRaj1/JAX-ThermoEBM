@@ -8,7 +8,7 @@ from src.loss_computation.thermo_computation import thermo_loss
 
 parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")
-temp_power = float(parser["TEMP"]["TEMP_POWER"])
+temp_power = int(parser["TEMP"]["TEMP_POWER"])
 
 if temp_power > 0:
     print("Using Temperature Schedule with Power: {}".format(temp_power))
