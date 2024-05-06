@@ -19,7 +19,7 @@ num_train_data = int(parser["PIPELINE"]["NUM_TRAIN_DATA"])
 num_val_data = int(parser["PIPELINE"]["NUM_VAL_DATA"])
 batch_size = int(parser["PIPELINE"]["BATCH_SIZE"])
 num_exp = int(parser["PIPELINE"]["NUM_EXPERIMENTS"])
-temp_power = int(parser["TEMP"]["TEMP_POWER"])
+temp_power = float(parser["TEMP"]["TEMP_POWER"])
 dataset, val_dataset = get_data(data_set_name)
 
 # Take a subset of the dataset to ease computation
@@ -36,5 +36,5 @@ del val_loader, train_loader, train_data, val_data
 log_path = f"logs/{data_set_name}/p={temp_power}/batch={batch_size}"
 os.makedirs(f"{log_path}/images", exist_ok=True)
 
-for exp in tqdm.tqdm(range(0, num_exp)):
+for exp in tqdm.tqdm(range(4, num_exp)):
     run_experiment(exp, train_x, val_x, log_path)

@@ -12,7 +12,7 @@ parser.read("hyperparams.ini")
 
 batch_size = int(parser["PIPELINE"]["BATCH_SIZE"])
 z_channels = int(parser["EBM"]["Z_CHANNELS"])
-temp_power = int(parser["TEMP"]["TEMP_POWER"])
+temp_power = float(parser["TEMP"]["TEMP_POWER"])
 num_temps = int(parser["TEMP"]["NUM_TEMPS"])
 include_bias = bool(parser["TEMP"]["INCLUDE_BIAS"])
 
