@@ -20,6 +20,7 @@ num_val_data = int(parser["PIPELINE"]["NUM_VAL_DATA"])
 batch_size = int(parser["PIPELINE"]["BATCH_SIZE"])
 num_exp = int(parser["PIPELINE"]["NUM_EXPERIMENTS"])
 temp_power = float(parser["TEMP"]["TEMP_POWER"])
+num_temps = int(parser["TEMP"]["NUM_TEMPS"])
 dataset, val_dataset = get_data(data_set_name)
 
 # Take a subset of the dataset to ease computation
