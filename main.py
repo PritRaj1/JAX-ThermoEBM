@@ -20,6 +20,7 @@ num_val_data = int(parser["PIPELINE"]["NUM_VAL_DATA"])
 batch_size = int(parser["PIPELINE"]["BATCH_SIZE"])
 num_exp = int(parser["PIPELINE"]["NUM_EXPERIMENTS"])
 temp_power = float(parser["TEMP"]["TEMP_POWER"])
+num_temps = int(parser["TEMP"]["NUM_TEMPS"])
 dataset, val_dataset = get_data(data_set_name)
 
 # Take a subset of the dataset to ease computation
@@ -33,7 +34,11 @@ train_x = np.stack([x for x, _ in train_loader])
 val_x = np.stack([x for x, _ in val_loader])
 del val_loader, train_loader, train_data, val_data
 
-log_path = f"logs/{data_set_name}/p={temp_power}/batch={batch_size}"
+if num_temps == 10:
+    log_path = f"logs/{data_set_name}/p={temp_power}/batch={batch_size}"
+else:
+    log_path = f"extra_logs/{data_set_name}/temps={num_temps}/p={temp_power}/batch={batch_size}"
+
 os.makedirs(f"{log_path}/images", exist_ok=True)
 
 for exp in tqdm.tqdm(range(0, num_exp)):
