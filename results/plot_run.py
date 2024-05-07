@@ -4,7 +4,7 @@ import pandas as pd
 import os
 import numpy as np
 
-DATA_NAME = 'CIFAR10'
+DATA_NAME = 'CelebA'
 
 os.makedirs(f"results/{DATA_NAME}/evolutions", exist_ok=True)
 os.makedirs(f"results/{DATA_NAME}/boxplots", exist_ok=True)
@@ -15,19 +15,11 @@ sns.set(font_scale=1.1)
 sns.set_style("whitegrid", rc ={'text.usetex' : True, 'font.family' : 'serif', 'font.serif' : ['Computer Modern']})
 
 NUM_EXPERIMENTS = 5
-TEMPS = [0, 1, 3, 6, 10]
+TEMPS = [0.1, 0.3, 1, 3, 6, 10]
 BATCH_SIZE = 75
-OTHER_BATCHES = [25, 50]
+OTHER_BATCHES = [25, 50, 75, 150]
 
-
-dict_train_loss = {}
-dict_train_grad_var = {}
-dict_val_loss = {}
-dict_fid = {}
-dict_mifid = {}
-dict_kid = {}
-
-# Initialise empty dictionaries to store train_loss, train_grad_var, val_loss, and val_FID for each temperature
+#Dictionaries for train_loss, train_grad_var, val_loss, and val_FID at each temperature
 dict_train_loss = {}
 dict_train_grad_var = {}
 dict_val_loss = {}
@@ -36,6 +28,7 @@ dict_val_kid = {}
 dict_val_mifid = {}
 
 for temp in TEMPS:
+
     # Load the data
     log_path = f"logs/{DATA_NAME}/p={temp}/batch={BATCH_SIZE}/"
     for i in range(NUM_EXPERIMENTS):
@@ -97,6 +90,7 @@ dict_other_batch_val_loss = {}
 dict_other_batch_fid = {}
 dict_other_batch_mifid = {}
 dict_other_batch_kid = {}
+
 for batch_size in OTHER_BATCHES:
     # Load the data
     log_path = f"logs/{DATA_NAME}/p=0/batch={batch_size}/"
@@ -152,8 +146,9 @@ for batch_size in OTHER_BATCHES:
     dict_other_batch_mifid[batch_size] = other_batch_mifid
     dict_other_batch_kid[batch_size] = other_batch_kid
 
+### Evolutions ###
 
-# Plot the train loss
+# 1. Train loss
 plt.figure(figsize=(10, 6))
 for batch_size in OTHER_BATCHES:
     label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
@@ -166,7 +161,7 @@ plt.ylabel(r"$-\log(p(\mathbf{x}|\theta))$")
 plt.title(f'Average Train Loss for {NUM_EXPERIMENTS} Experiments')
 plt.savefig(f"results/{DATA_NAME}/evolutions/train_loss.png")
 
-# Plot the train grad var
+# 2. Train gradient variance
 plt.figure(figsize=(10, 6))
 for batch_size in OTHER_BATCHES:
     label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
@@ -179,7 +174,7 @@ plt.ylabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p(\mathbf{x}|\theta))\
 plt.title(f'Average Train Gradient Variance for {NUM_EXPERIMENTS} Experiments')
 plt.savefig(f"results/{DATA_NAME}/evolutions/train_grad_var.png")
 
-# Plot the val loss
+# 3. Val loss
 plt.figure(figsize=(10, 6))
 for batch_size in OTHER_BATCHES:
     label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
@@ -192,7 +187,7 @@ plt.ylabel(r"$-\log(p(\mathbf{x}|\theta))$")
 plt.title(f'Average Validation Loss for {NUM_EXPERIMENTS} Experiments')
 plt.savefig(f"results/{DATA_NAME}/evolutions/val_loss.png")
 
-# Plot the FID
+# 4. FID
 plt.figure(figsize=(10, 6))
 for batch_size in OTHER_BATCHES:
     label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
@@ -205,7 +200,7 @@ plt.ylabel(r"$\overline{FID}_\infty$")
 plt.title(f'Average ' + r"$\overline{FID}_\infty$" + f' for {NUM_EXPERIMENTS} Experiments')
 plt.savefig(f"results/{DATA_NAME}/evolutions/fid.png")
 
-# Plot the KID
+# 5. KID
 plt.figure(figsize=(10, 6))
 for batch_size in OTHER_BATCHES:
     label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
@@ -218,7 +213,7 @@ plt.ylabel(r"$\overline{KID}_\infty$")
 plt.title(f'Average ' + r"$\overline{KID}_\infty$" + f' for {NUM_EXPERIMENTS} Experiments')
 plt.savefig(f"results/{DATA_NAME}/evolutions/kid.png")
 
-# Plot the MIFID
+# 6. MIFID
 plt.figure(figsize=(10, 6))
 for batch_size in OTHER_BATCHES:
     label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
@@ -234,7 +229,7 @@ plt.savefig(f"results/{DATA_NAME}/evolutions/mifid.png")
 # Only vanilla model, p=0, has batch size 25 and 150
 for batch_size in OTHER_BATCHES:
     final_train_loss = dict_other_batch_train_loss[batch_size].groupby('experiment').last()
-    final_train_grad_var = dict_other_batch_train_grad_var[batch_size].groupby('experiment').last()
+    final_train_grad_var = dict_other_batch_train_grad_var[batch_size].groupby('experiment').tail(2)
     final_val_loss = dict_other_batch_val_loss[batch_size].groupby('experiment').last()
     final_fid = dict_other_batch_fid[batch_size].groupby('experiment').last()
     final_kid = dict_other_batch_kid[batch_size].groupby('experiment').last()
@@ -263,10 +258,11 @@ for batch_size in OTHER_BATCHES:
         all_final_kid = pd.concat([all_final_kid, final_kid])
         all_final_mifid = pd.concat([all_final_mifid, final_mifid])
 
-# Plot boxplot of the final loss and metrics for each temperature
+### Boxplots ###
+
 for temp in TEMPS:
     final_train_loss = dict_train_loss[temp].groupby('experiment').last()
-    final_train_grad_var = dict_train_grad_var[temp].groupby('experiment').last()
+    final_train_grad_var = dict_train_grad_var[temp].groupby('experiment').tail(2)
     final_val_loss = dict_val_loss[temp].groupby('experiment').last()
     final_fid = dict_val_fid[temp].groupby('experiment').last()
     final_kid = dict_val_kid[temp].groupby('experiment').last()
@@ -323,10 +319,38 @@ plt.ylabel(r"$\overline{MIFID}_\infty$")
 plt.title(f'Final ' + r"$\overline{MIFID}_\infty$" + f' for {NUM_EXPERIMENTS} Experiments')
 plt.savefig(f"results/{DATA_NAME}/boxplots/final_mifid.png")
 
+### Train gradient variance boxplots i.e. split up the data by temperature and batch size ### 
+
+# Extract all 'Vanilla Model' data from all_final_train_grad_var
+grad_var_bsize = all_final_train_grad_var[all_final_train_grad_var['temp'] == 'Vanilla Model']
+for batch_size in OTHER_BATCHES:
+    grad_var_bsize = pd.concat([grad_var_bsize, all_final_train_grad_var[all_final_train_grad_var['temp'] == f'Vanilla Model {batch_size}']])
+
+# Extract all 'p' varying data from all_final_train_grad_var
+grad_var_p = all_final_train_grad_var[all_final_train_grad_var['temp'] != 'Vanilla Model']
+for batch_size in OTHER_BATCHES:
+    grad_var_p = grad_var_p[grad_var_p['temp'] != f'Vanilla Model {batch_size}']
+                            
+# Variation with Batch Size
+plt.figure(figsize=(15, 3))
+sns.boxplot(data=grad_var_bsize, x='Train Grad Var', y='temp', fill=False, orient='h', hue='temp')
+plt.ylabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p(\mathbf{x}|\theta))\right]$")
+plt.title(f'Gradient Variance against Batch Size for {NUM_EXPERIMENTS} Experiments')
+plt.savefig(f"results/{DATA_NAME}/boxplots/grad_var_bsize.png")
+
+# Variation with temperature
+plt.figure(figsize=(15, 5))
+sns.boxplot(data=grad_var_p, x='Train Grad Var', y='temp', fill=False, orient='h', hue='temp')
+plt.ylabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p(\mathbf{x}|\theta))\right]$")
+plt.title(f'Gradient Variance against Temperature Power for {NUM_EXPERIMENTS} Experiments')
+plt.savefig(f"results/{DATA_NAME}/boxplots/grad_var_p.png")
+
+
+### Relationships ###
+
 fid_var = pd.merge(all_final_train_grad_var, all_final_fid, on=['experiment', 'temp'])
 mifid_var = pd.merge(all_final_train_grad_var, all_final_mifid, on=['experiment', 'temp'])
 kid_var = pd.merge(all_final_train_grad_var, all_final_kid, on=['experiment', 'temp'])
-
 
 # Plot final fid against variance, with error bars
 
@@ -336,36 +360,15 @@ for batch_size in OTHER_BATCHES:
     label = r"Vanilla Model " + f"{batch_size}"
     plot_label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
     plt.scatter(fid_var[fid_var['temp'] == label]['Train Grad Var'], fid_var[fid_var['temp'] == label]['FID_inf'], label=plot_label, marker='x')
-
-    # # Remove outliers for regression # (2 stds from the mean)
-    # mean = fid_var[fid_var['temp'] == label]['FID_inf'].mean()
-    # std = fid_var[fid_var['temp'] == label]['FID_inf'].std()
-    # fid_var = fid_var[~((fid_var['temp'] == label) & (fid_var['FID_inf'] > mean + 1.5 * std))]
-    # fid_var = fid_var[~((fid_var['temp'] == label) & (fid_var['FID_inf'] < mean - 2 * std))]
-
     reg_points.append(fid_var[fid_var['temp'] == label][['Train Grad Var', 'FID_inf']])
-    # mean_fid = fid_var[fid_var['temp'] == label]['FID_inf'].mean()
-    # std_fid = fid_var[fid_var['temp'] == label]['FID_inf'].std()
-    # mean_var = fid_var[fid_var['temp'] == label]['Train Grad Var'].mean()
-    # std_var = fid_var[fid_var['temp'] == label]['Train Grad Var'].std()
-    # plt.errorbar(mean_var, mean_fid, xerr=std_var, yerr=std_fid, capsize=2, marker='x', label=label)
+
 for temp in TEMPS:
     label = r'p=' + f'{temp}' if temp != 0 else r'Vanilla Model'
     plot_label = r'p=' + f'{temp}' + r', $N_{batch}=75$' if temp != 0 else r'Vanilla Model, $N_{batch}=75$'
     plt.scatter(fid_var[fid_var['temp'] == label]['Train Grad Var'], fid_var[fid_var['temp'] == label]['FID_inf'], label=plot_label, marker='x')
 
-    # # Remove outliers for regression # (2 stds from the mean)
-    # mean = fid_var[fid_var['temp'] == label]['FID_inf'].mean()
-    # std = fid_var[fid_var['temp'] == label]['FID_inf'].std()
-    # fid_var = fid_var[~((fid_var['temp'] == label) & (fid_var['FID_inf'] > mean + 1.5 * std))]
-    # fid_var = fid_var[~((fid_var['temp'] == label) & (fid_var['FID_inf'] < mean - 2 * std))]
-
-    reg_points.append(fid_var[fid_var['temp'] == label][['Train Grad Var', 'FID_inf']])
-    # mean_fid = fid_var[fid_var['temp'] == label]['FID_inf'].mean()
-    # std_fid = fid_var[fid_var['temp'] == label]['FID_inf'].std()
-    # mean_var = fid_var[fid_var['temp'] == label]['Train Grad Var'].mean()
-    # std_var = fid_var[fid_var['temp'] == label]['Train Grad Var'].std()
-    # plt.errorbar(mean_var, mean_fid, xerr=std_var, yerr=std_fid, capsize=2, marker='x', label=label)
+    if temp != 0.1 and temp != 0.3:
+        reg_points.append(fid_var[fid_var['temp'] == label][['Train Grad Var', 'FID_inf']])
 
 # Remove outliers 
 reg_points = pd.concat(reg_points)
@@ -388,37 +391,15 @@ for batch_size in OTHER_BATCHES:
     label = r"Vanilla Model " + f"{batch_size}"
     plot_label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
     plt.scatter(mifid_var[mifid_var['temp'] == label]['Train Grad Var'], mifid_var[mifid_var['temp'] == label]['MIFID_inf'], label=plot_label, marker='x')
-
-    # # Remove outliers for regression # (2 stds from the mean)
-    # mean = mifid_var[mifid_var['temp'] == label]['MIFID_inf'].mean()
-    # std = mifid_var[mifid_var['temp'] == label]['MIFID_inf'].std()
-    # mifid_var = mifid_var[~((mifid_var['temp'] == label) & (mifid_var['MIFID_inf'] > mean + 1.5 * std))]
-    # mifid_var = mifid_var[~((mifid_var['temp'] == label) & (mifid_var['MIFID_inf'] < mean - 2 * std))]
-
-
     reg_points.append(mifid_var[mifid_var['temp'] == label][['Train Grad Var', 'MIFID_inf']])
-    # mean_mifid = mifid_var[mifid_var['temp'] == label]['MIFID_inf'].mean()
-    # std_mifid = mifid_var[mifid_var['temp'] == label]['MIFID_inf'].std()
-    # mean_var = mifid_var[mifid_var['temp'] == label]['Train Grad Var'].mean()
-    # std_var = mifid_var[mifid_var['temp'] == label]['Train Grad Var'].std()
-    # plt.errorbar(mean_var, mean_mifid, xerr=std_var, yerr=std_mifid, fmt='x', label=label, capsize=2)
+
 for temp in TEMPS:
     label = r'p=' + f'{temp}' if temp != 0 else r'Vanilla Model'
     plot_label = r'p=' + f'{temp}' + r', $N_{batch}=$75' if temp != 0 else r'Vanilla Model, $N_{batch}=$75'
     plt.scatter(mifid_var[mifid_var['temp'] == label]['Train Grad Var'], mifid_var[mifid_var['temp'] == label]['MIFID_inf'], label=plot_label, marker='x')
 
-    # # Remove outliers for regression # (2 stds from the mean)
-    # mean = mifid_var[mifid_var['temp'] == label]['MIFID_inf'].mean()
-    # std = mifid_var[mifid_var['temp'] == label]['MIFID_inf'].std()
-    # mifid_var = mifid_var[~((mifid_var['temp'] == label) & (mifid_var['MIFID_inf'] > mean + 1.5 * std))]
-    # mifid_var = mifid_var[~((mifid_var['temp'] == label) & (mifid_var['MIFID_inf'] < mean - 2 * std))]
-
-    reg_points.append(mifid_var[mifid_var['temp'] == label][['Train Grad Var', 'MIFID_inf']])
-    # mean_mifid = mifid_var[mifid_var['temp'] == label]['MIFID_inf'].mean()
-    # std_mifid = mifid_var[mifid_var['temp'] == label]['MIFID_inf'].std()
-    # mean_var = mifid_var[mifid_var['temp'] == label]['Train Grad Var'].mean()
-    # std_var = mifid_var[mifid_var['temp'] == label]['Train Grad Var'].std()
-    # plt.errorbar(mean_var, mean_mifid, xerr=std_var, yerr=std_mifid, fmt='x', label=label, capsize=2)
+    if temp != 0.1 and temp != 0.3:
+        reg_points.append(mifid_var[mifid_var['temp'] == label][['Train Grad Var', 'MIFID_inf']])
 
 # Remove outliers
 reg_points = pd.concat(reg_points)
@@ -441,37 +422,15 @@ for batch_size in OTHER_BATCHES:
     label = r"Vanilla Model " + f"{batch_size}"
     plot_label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
     plt.scatter(kid_var[kid_var['temp'] == label]['Train Grad Var'], kid_var[kid_var['temp'] == label]['KID_inf'], label=plot_label, marker='x')
-
-    # # Remove outliers for regression # (2 stds from the mean)
-    # mean = kid_var[kid_var['temp'] == label]['KID_inf'].mean()
-    # std = kid_var[kid_var['temp'] == label]['KID_inf'].std()
-    # kid_var = kid_var[~((kid_var['temp'] == label) & (kid_var['KID_inf'] > mean + 1.5 * std))]
-    # kid_var = kid_var[~((kid_var['temp'] == label) & (kid_var['KID_inf'] < mean - 2 * std))]
-
-
     reg_points.append(kid_var[kid_var['temp'] == label][['Train Grad Var', 'KID_inf']])
-    # mean_kid = kid_var[kid_var['temp'] == label]['KID_inf'].mean()
-    # std_kid = kid_var[kid_var['temp'] == label]['KID_inf'].std()
-    # mean_var = kid_var[kid_var['temp'] == label]['Train Grad Var'].mean()
-    # std_var = kid_var[kid_var['temp'] == label]['Train Grad Var'].std()
-    # plt.errorbar(mean_var, mean_kid, xerr=std_var, yerr=std_kid, label=label, capsize=2, marker='x')
+
 for temp in TEMPS:
     label = r'p=' + f'{temp}' if temp != 0 else r'Vanilla Model'
     plot_label = r'p=' + f'{temp}' + r', $N_{batch}=75$' if temp != 0 else r'Vanilla Model, $N_{batch}=75$'
     plt.scatter(kid_var[kid_var['temp'] == label]['Train Grad Var'], kid_var[kid_var['temp'] == label]['KID_inf'], label=plot_label, marker='x')
 
-    # # Remove outliers for regression # (2 stds from the mean)
-    # mean = kid_var[kid_var['temp'] == label]['KID_inf'].mean()
-    # std = kid_var[kid_var['temp'] == label]['KID_inf'].std()
-    # kid_var = kid_var[~((kid_var['temp'] == label) & (kid_var['KID_inf'] > mean + 1.5 * std))]
-    # kid_var = kid_var[~((kid_var['temp'] == label) & (kid_var['KID_inf'] < mean - 2 * std))]
-
-    reg_points.append(kid_var[kid_var['temp'] == label][['Train Grad Var', 'KID_inf']])
-    # mean_kid = kid_var[kid_var['temp'] == label]['KID_inf'].mean()
-    # std_kid = kid_var[kid_var['temp'] == label]['KID_inf'].std()
-    # mean_var = kid_var[kid_var['temp'] == label]['Train Grad Var'].mean()
-    # std_var = kid_var[kid_var['temp'] == label]['Train Grad Var'].std()
-    # plt.errorbar(mean_var, mean_kid, xerr=std_var, yerr=std_kid, label=label, capsize=2, marker='x')
+    if temp != 0.1 and temp != 0.3:
+        reg_points.append(kid_var[kid_var['temp'] == label][['Train Grad Var', 'KID_inf']])
 
 # Remove outliers
 reg_points = pd.concat(reg_points)
@@ -504,13 +463,8 @@ for batch_size in OTHER_BATCHES:
     std_var = fid_var[fid_var['temp'] == label]['Train Grad Var'].std()
     plt.errorbar(mean_var, mean_fid, xerr=std_var, yerr=std_fid, capsize=2, marker='x', label=plot_label)
 
-    # # Remove outliers for regression # (2 stds from the mean)
-    # mean = fid_var[fid_var['temp'] == label]['FID_inf'].mean()
-    # std = fid_var[fid_var['temp'] == label]['FID_inf'].std()
-    # fid_var = fid_var[~((fid_var['temp'] == label) & (fid_var['FID_inf'] > mean + 1.5 * std))]
-    # fid_var = fid_var[~((fid_var['temp'] == label) & (fid_var['FID_inf'] < mean - 2 * std))]
-
     reg_points.append(fid_var[fid_var['temp'] == label][['Train Grad Var', 'FID_inf']])
+
 for temp in TEMPS:
     label = r'p=' + f'{temp}' if temp != 0 else r'Vanilla Model'
     plot_label = r'p=' + f'{temp}' + r', $N_{batch}=75$' if temp != 0 else r'Vanilla Model, $N_{batch}=75$'
@@ -521,13 +475,8 @@ for temp in TEMPS:
     std_var = fid_var[fid_var['temp'] == label]['Train Grad Var'].std()
     plt.errorbar(mean_var, mean_fid, xerr=std_var, yerr=std_fid, capsize=2, marker='x', label=plot_label)
 
-    # # Remove outliers for regression # (2 stds from the mean)
-    # mean = fid_var[fid_var['temp'] == label]['FID_inf'].mean()
-    # std = fid_var[fid_var['temp'] == label]['FID_inf'].std()
-    # fid_var = fid_var[~((fid_var['temp'] == label) & (fid_var['FID_inf'] > mean + 1.5 * std))]
-    # fid_var = fid_var[~((fid_var['temp'] == label) & (fid_var['FID_inf'] < mean - 2 * std))]
-
-    reg_points.append(fid_var[fid_var['temp'] == label][['Train Grad Var', 'FID_inf']])
+    if temp != 0.1 and temp != 0.3:
+        reg_points.append(fid_var[fid_var['temp'] == label][['Train Grad Var', 'FID_inf']])
 
 # Remove outliers
 reg_points = pd.concat(reg_points)
@@ -556,12 +505,6 @@ for batch_size in OTHER_BATCHES:
     std_var = mifid_var[mifid_var['temp'] == label]['Train Grad Var'].std()
     plt.errorbar(mean_var, mean_mifid, xerr=std_var, yerr=std_mifid, fmt='x', label=plot_label, capsize=2)
 
-    # # Remove outliers for regression # (2 stds from the mean)
-    # mean = mifid_var[mifid_var['temp'] == label]['MIFID_inf'].mean()
-    # std = mifid_var[mifid_var['temp'] == label]['MIFID_inf'].std()
-    # mifid_var = mifid_var[~((mifid_var['temp'] == label) & (mifid_var['MIFID_inf'] > mean + 1.5 * std))]
-    # mifid_var = mifid_var[~((mifid_var['temp'] == label) & (mifid_var['MIFID_inf'] < mean - 2 * std))]
-
     reg_points.append(mifid_var[mifid_var['temp'] == label][['Train Grad Var', 'MIFID_inf']])
 
 for temp in TEMPS:
@@ -574,13 +517,8 @@ for temp in TEMPS:
     std_var = mifid_var[mifid_var['temp'] == label]['Train Grad Var'].std()
     plt.errorbar(mean_var, mean_mifid, xerr=std_var, yerr=std_mifid, fmt='x', label=plot_label, capsize=2)
 
-    # # Remove outliers for regression # (2 stds from the mean)
-    # mean = mifid_var[mifid_var['temp'] == label]['MIFID_inf'].mean()
-    # std = mifid_var[mifid_var['temp'] == label]['MIFID_inf'].std()
-    # mifid_var = mifid_var[~((mifid_var['temp'] == label) & (mifid_var['MIFID_inf'] > mean + 1.5 * std))]
-    # mifid_var = mifid_var[~((mifid_var['temp'] == label) & (mifid_var['MIFID_inf'] < mean - 2 * std))]
-
-    reg_points.append(mifid_var[mifid_var['temp'] == label][['Train Grad Var', 'MIFID_inf']])
+    if temp != 0.1 and temp != 0.3:
+        reg_points.append(mifid_var[mifid_var['temp'] == label][['Train Grad Var', 'MIFID_inf']])
 
 # Remove outliers
 reg_points = pd.concat(reg_points)
@@ -609,12 +547,6 @@ for batch_size in OTHER_BATCHES:
     std_var = kid_var[kid_var['temp'] == label]['Train Grad Var'].std()
     plt.errorbar(mean_var, mean_kid, xerr=std_var, yerr=std_kid, label=plot_label, capsize=2, marker='x')
 
-    # # Remove outliers for regression # (2 stds from the mean)
-    # mean = kid_var[kid_var['temp'] == label]['KID_inf'].mean()
-    # std = kid_var[kid_var['temp'] == label]['KID_inf'].std()
-    # kid_var = kid_var[~((kid_var['temp'] == label) & (kid_var['KID_inf'] > mean + 1.5 * std))]
-    # kid_var = kid_var[~((kid_var['temp'] == label) & (kid_var['KID_inf'] < mean - 2 * std))]
-
     reg_points.append(kid_var[kid_var['temp'] == label][['Train Grad Var', 'KID_inf']])
 
 for temp in TEMPS:
@@ -627,13 +559,8 @@ for temp in TEMPS:
     std_var = kid_var[kid_var['temp'] == label]['Train Grad Var'].std()
     plt.errorbar(mean_var, mean_kid, xerr=std_var, yerr=std_kid, label=plot_label, capsize=2, marker='x')
 
-    # # Remove outliers for regression # (2 stds from the mean)
-    # mean = kid_var[kid_var['temp'] == label]['KID_inf'].mean()
-    # std = kid_var[kid_var['temp'] == label]['KID_inf'].std()
-    # kid_var = kid_var[~((kid_var['temp'] == label) & (kid_var['KID_inf'] > mean + 1.5 * std))]
-    # kid_var = kid_var[~((kid_var['temp'] == label) & (kid_var['KID_inf'] < mean - 2 * std))]
-
-    reg_points.append(kid_var[kid_var['temp'] == label][['Train Grad Var', 'KID_inf']])
+    if temp != 0.1 and temp != 0.3:
+        reg_points.append(kid_var[kid_var['temp'] == label][['Train Grad Var', 'KID_inf']])
 
 # Remove outliers
 reg_points = pd.concat(reg_points)

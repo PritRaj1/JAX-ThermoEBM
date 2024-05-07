@@ -29,13 +29,13 @@ plt.ylabel("Learning Rate")
 plt.title("Parameter update")
 plt.savefig("results/lr_schedule.png")
 
-p_list = [0, 0.3, 0.1, 1, 3, 6, 10]
+p_list = [0, 0.3, 0.1, 1, 2, 3, 6, 10]
 num_temps = 100
 
 plt.figure(figsize=(10, 6))
 for p in p_list:
     temp = np.linspace(0, 1, num_temps) ** p
-    label = "p = {}".format(p) if p != 0 else "p = 0 (Vanilla Model)"
+    label = "p = {}".format(p)
     plt.plot(temp, label=label)
 plt.xlabel("Schedule Index")
 plt.ylabel("Temperature")
