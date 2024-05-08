@@ -3,7 +3,6 @@ from matplotlib import rc
 from functools import partial
 import pandas as pd
 import numpy as np
-from tqdm import tqdm
 
 from src.pipeline.initialise import *
 from src.pipeline.pipeline_steps import train_step, val_step
@@ -70,6 +69,13 @@ def run_experiment(exp_num, train_x, val_x, log_path):
     jit_train_step = jax.jit(loaded_train_step)
     jit_val_step = jax.jit(loaded_val_step)
     jit_metrics_fcn = jax.jit(metrics_fcn)
+
+    # ### TODO: Add FLOPS calculation ##
+    # if exp_num == 0:
+    #     x = jnp.zeros((train_x.shape[-3], train_x.shape[-2], train_x.shape[-1]))
+    #     compiled = jit_val_step.lower(jax.random.PRNGKey(0), x, params_tup).compile()
+    #     flops = compiled.cost_analysis()[0]['flops']
+    #     print(f"Number of FLOPS: {flops:.4e}")
 
     @jax.jit
     def train_batches(carry, x):
