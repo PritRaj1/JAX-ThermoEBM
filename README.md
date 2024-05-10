@@ -36,8 +36,6 @@ pip install -r requirements.txt
 ```bash
 python main.py
 
-## References
-[Pang et al., 2020](https://proceedings.neurips.cc/paper_files/paper/2020/file/fa3060edb66e6ff4507886f9912e1ab9-Paper.pdf)
-[Calderhead and Girolami, 2009](https://www.sciencedirect.com/science/article/pii/S0167947309002722)
+
 
 
