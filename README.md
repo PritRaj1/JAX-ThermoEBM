@@ -28,6 +28,7 @@ To get started, follow these steps:
 
 ```bash
 pip install -r requirements.txt
+```
 
 3. Edit the hyperparameters in the `hyperparams.ini` file according to your experiment setup.
 
@@ -35,6 +36,7 @@ pip install -r requirements.txt
 
 ```bash
 python main.py
+```
 
 
 
