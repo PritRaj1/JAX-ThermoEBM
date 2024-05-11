@@ -11,16 +11,23 @@ os.makedirs(f"results/{DATA_NAME}/boxplots", exist_ok=True)
 os.makedirs(f"results/{DATA_NAME}/relationships", exist_ok=True)
 
 # Set plot styling
-sns.set(font_scale=1.1)
+sns.set(font_scale=1.5)
 sns.set_style("whitegrid", rc ={'text.usetex' : True, 'font.family' : 'serif', 'font.serif' : ['Computer Modern']})
 
 NUM_EXPERIMENTS = 5
-TEMPS = [0.1, 0.3, 1, 3, 6, 10]
+TEMPS = [0.1, 0.3, 1, 2, 3, 6, 10]
 BATCH_SIZE = 75
 OTHER_BATCHES = [25, 50, 75, 150]
 
+# Colour maps for the different temperatures
+temp_cmap = plt.get_cmap('coolwarm')
+temp_colors = [temp_cmap(i) for i in np.linspace(0, 1, len(TEMPS))]
+batch_cmap = plt.get_cmap('summer')
+batch_colors = [batch_cmap(i) for i in np.linspace(0, 1, len(OTHER_BATCHES))]
+
 #Dictionaries for train_loss, train_grad_var, val_loss, and val_FID at each temperature
 dict_train_loss = {}
+dict_train_grad = {}
 dict_train_grad_var = {}
 dict_val_loss = {}
 dict_val_fid = {}
@@ -37,6 +44,7 @@ for temp in TEMPS:
         # Create a dataframe with all the train loss
         if i == 0:
             all_train_loss = df["Train Loss"]
+            all_train_grad = df["Train Grad"]
             all_train_grad_var = df["Train Grad Var"]
             all_val_loss = df["Val Loss"]
             all_fid = df["FID_inf"]
@@ -46,6 +54,7 @@ for temp in TEMPS:
 
         else:
             all_train_loss = pd.concat([all_train_loss, df["Train Loss"]], axis=1)
+            all_train_grad = pd.concat([all_train_grad, df["Train Grad"]], axis=1)
             all_train_grad_var = pd.concat([all_train_grad_var, df["Train Grad Var"]], axis=1)
             all_val_loss = pd.concat([all_val_loss, df["Val Loss"]], axis=1)
             all_fid = pd.concat([all_fid, df['FID_inf']], axis=1)
@@ -55,6 +64,10 @@ for temp in TEMPS:
     all_train_loss.columns = [f"experiment_{i}" for i in range(NUM_EXPERIMENTS)]
     all_train_loss['epoch'] = epochs
     all_train_loss = all_train_loss.melt(id_vars='epoch', var_name='experiment', value_name='Train Loss')
+
+    all_train_grad.columns = [f"experiment_{i}" for i in range(NUM_EXPERIMENTS)]
+    all_train_grad['epoch'] = epochs
+    all_train_grad = all_train_grad.melt(id_vars='epoch', var_name='experiment', value_name='Train Grad')
 
     all_train_grad_var.columns = [f"experiment_{i}" for i in range(NUM_EXPERIMENTS)]
     all_train_grad_var['epoch'] = epochs
@@ -77,6 +90,7 @@ for temp in TEMPS:
     all_kid = all_kid.melt(id_vars='epoch', var_name='experiment', value_name='KID_inf')
 
     dict_train_loss[temp] = all_train_loss
+    dict_train_grad[temp] = all_train_grad
     dict_train_grad_var[temp] = all_train_grad_var
     dict_val_loss[temp] = all_val_loss
     dict_val_fid[temp] = all_fid
@@ -85,6 +99,7 @@ for temp in TEMPS:
 
 # Only vanilla model, p=0, has batch size 25 and 150
 dict_other_batch_train_loss = {}
+dict_other_batch_train_grad = {}
 dict_other_batch_train_grad_var = {}
 dict_other_batch_val_loss = {}
 dict_other_batch_fid = {}
@@ -100,6 +115,7 @@ for batch_size in OTHER_BATCHES:
         # Create a dataframe with all the train loss
         if i == 0:
             other_batch_train_loss = df["Train Loss"]
+            other_batch_train_grad = df["Train Grad"]
             other_batch_train_grad_var = df["Train Grad Var"]
             other_batch_val_loss = df["Val Loss"]
             other_batch_fid = df["FID_inf"]
@@ -109,6 +125,7 @@ for batch_size in OTHER_BATCHES:
 
         else:
             other_batch_train_loss = pd.concat([other_batch_train_loss, df["Train Loss"]], axis=1)
+            other_batch_train_grad = pd.concat([other_batch_train_grad, df["Train Grad"]], axis=1)
             other_batch_train_grad_var = pd.concat([other_batch_train_grad_var, df["Train Grad Var"]], axis=1)
             other_batch_val_loss = pd.concat([other_batch_val_loss, df["Val Loss"]], axis=1)
             other_batch_fid = pd.concat([other_batch_fid, df['FID_inf']], axis=1)
@@ -118,6 +135,10 @@ for batch_size in OTHER_BATCHES:
     other_batch_train_loss.columns = [f"experiment_{i}" for i in range(NUM_EXPERIMENTS)]
     other_batch_train_loss['epoch'] = epochs
     other_batch_train_loss = other_batch_train_loss.melt(id_vars='epoch', var_name='experiment', value_name='Train Loss')
+
+    other_batch_train_grad.columns = [f"experiment_{i}" for i in range(NUM_EXPERIMENTS)]
+    other_batch_train_grad['epoch'] = epochs
+    other_batch_train_grad = other_batch_train_grad.melt(id_vars='epoch', var_name='experiment', value_name='Train Grad')
 
     other_batch_train_grad_var.columns = [f"experiment_{i}" for i in range(NUM_EXPERIMENTS)]
     other_batch_train_grad_var['epoch'] = epochs
@@ -140,6 +161,7 @@ for batch_size in OTHER_BATCHES:
     other_batch_kid = other_batch_kid.melt(id_vars='epoch', var_name='experiment', value_name='KID_inf')
 
     dict_other_batch_train_loss[batch_size] = other_batch_train_loss
+    dict_other_batch_train_grad[batch_size] = other_batch_train_grad
     dict_other_batch_train_grad_var[batch_size] = other_batch_train_grad_var
     dict_other_batch_val_loss[batch_size] = other_batch_val_loss
     dict_other_batch_fid[batch_size] = other_batch_fid
@@ -152,75 +174,88 @@ for batch_size in OTHER_BATCHES:
 plt.figure(figsize=(10, 6))
 for batch_size in OTHER_BATCHES:
     label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
-    sns.lineplot(data=dict_other_batch_train_loss[batch_size], x='epoch', y='Train Loss', label=label)
+    sns.lineplot(data=dict_other_batch_train_loss[batch_size], x='epoch', y='Train Loss', label=label, color=batch_colors[OTHER_BATCHES.index(batch_size)])
 for temp in TEMPS:
     label = r'$p=$' + f'{temp}' + r", $N_{batch}=75$" if temp != 0 else r'Vanilla Model, $N_{batch}=75$'
-    sns.lineplot(data=dict_train_loss[temp], x='epoch', y='Train Loss', label=label)
+    sns.lineplot(data=dict_train_loss[temp], x='epoch', y='Train Loss', label=label, color=temp_colors[TEMPS.index(temp)])
 plt.xlabel("Epoch")
 plt.ylabel(r"$-\log(p(\mathbf{x}|\theta))$")
 plt.title(f'Average Train Loss for {NUM_EXPERIMENTS} Experiments')
 plt.savefig(f"results/{DATA_NAME}/evolutions/train_loss.png")
 
-# 2. Train gradient variance
+# 2. Train gradient
 plt.figure(figsize=(10, 6))
 for batch_size in OTHER_BATCHES:
     label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
-    sns.lineplot(data=dict_other_batch_train_grad_var[batch_size], x='epoch', y='Train Grad Var', label=label)
+    sns.lineplot(data=dict_other_batch_train_grad[batch_size], x='epoch', y='Train Grad', label=label, color=batch_colors[OTHER_BATCHES.index(batch_size)])
 for temp in TEMPS:
     label = r'$p=$' + f'{temp}' + r", $N_{batch}=75$" if temp != 0 else r'Vanilla Model, $N_{batch}=75$'
-    sns.lineplot(data=dict_train_grad_var[temp], x='epoch', y='Train Grad Var', label=label)
+    sns.lineplot(data=dict_train_grad[temp], x='epoch', y='Train Grad', label=label, color=temp_colors[TEMPS.index(temp)])
+plt.xlabel("Epoch")
+plt.ylabel(r"$\nabla_\theta \log(p(\mathbf{x}|\theta))$")
+plt.title(f'Average Train Gradient for {NUM_EXPERIMENTS} Experiments')
+plt.savefig(f"results/{DATA_NAME}/evolutions/train_grad.png")
+
+# 3. Train gradient variance
+plt.figure(figsize=(10, 6))
+for batch_size in OTHER_BATCHES:
+    label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
+    sns.lineplot(data=dict_other_batch_train_grad_var[batch_size], x='epoch', y='Train Grad Var', label=label, color=batch_colors[OTHER_BATCHES.index(batch_size)])
+for temp in TEMPS:
+    label = r'$p=$' + f'{temp}' + r", $N_{batch}=75$" if temp != 0 else r'Vanilla Model, $N_{batch}=75$'
+    sns.lineplot(data=dict_train_grad_var[temp], x='epoch', y='Train Grad Var', label=label, color=temp_colors[TEMPS.index(temp)])
 plt.xlabel("Epoch")
 plt.ylabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p(\mathbf{x}|\theta))\right]$")
 plt.title(f'Average Train Gradient Variance for {NUM_EXPERIMENTS} Experiments')
 plt.savefig(f"results/{DATA_NAME}/evolutions/train_grad_var.png")
 
-# 3. Val loss
+# 4. Val loss
 plt.figure(figsize=(10, 6))
 for batch_size in OTHER_BATCHES:
     label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
-    sns.lineplot(data=dict_other_batch_val_loss[batch_size], x='epoch', y='Val Loss', label=label)
+    sns.lineplot(data=dict_other_batch_val_loss[batch_size], x='epoch', y='Val Loss', label=label, color=batch_colors[OTHER_BATCHES.index(batch_size)])
 for temp in TEMPS:
     label = r'$p=$' + f'{temp}' + r", $N_{batch}=75$" if temp != 0 else r'Vanilla Model, $N_{batch}=75$'
-    sns.lineplot(data=dict_val_loss[temp], x='epoch', y='Val Loss', label=label)
+    sns.lineplot(data=dict_val_loss[temp], x='epoch', y='Val Loss', label=label, color=temp_colors[TEMPS.index(temp)])
 plt.xlabel("Epoch")
 plt.ylabel(r"$-\log(p(\mathbf{x}|\theta))$")
 plt.title(f'Average Validation Loss for {NUM_EXPERIMENTS} Experiments')
 plt.savefig(f"results/{DATA_NAME}/evolutions/val_loss.png")
 
-# 4. FID
+# 5. FID
 plt.figure(figsize=(10, 6))
 for batch_size in OTHER_BATCHES:
     label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
-    sns.lineplot(data=dict_other_batch_fid[batch_size], x='epoch', y='FID_inf', label=label)
+    sns.lineplot(data=dict_other_batch_fid[batch_size], x='epoch', y='FID_inf', label=label, color=batch_colors[OTHER_BATCHES.index(batch_size)])
 for temp in TEMPS:
     label = r'$p=$' + f'{temp}' + r", $N_{batch}=75$" if temp != 0 else r'Vanilla Model, $N_{batch}=75$'
-    sns.lineplot(data=dict_val_fid[temp], x='epoch', y='FID_inf', label=label)
+    sns.lineplot(data=dict_val_fid[temp], x='epoch', y='FID_inf', label=label, color=temp_colors[TEMPS.index(temp)])
 plt.xlabel("Epoch")
 plt.ylabel(r"$\overline{FID}_\infty$")
 plt.title(f'Average ' + r"$\overline{FID}_\infty$" + f' for {NUM_EXPERIMENTS} Experiments')
 plt.savefig(f"results/{DATA_NAME}/evolutions/fid.png")
 
-# 5. KID
+# 6. KID
 plt.figure(figsize=(10, 6))
 for batch_size in OTHER_BATCHES:
     label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
-    sns.lineplot(data=dict_other_batch_kid[batch_size], x='epoch', y='KID_inf', label=label)
+    sns.lineplot(data=dict_other_batch_kid[batch_size], x='epoch', y='KID_inf', label=label, color=batch_colors[OTHER_BATCHES.index(batch_size)])
 for temp in TEMPS:
     label = r'$p=$' + f'{temp}' + r", $N_{batch}=75$" if temp != 0 else r'Vanilla Model, $N_{batch}=75$'
-    sns.lineplot(data=dict_val_kid[temp], x='epoch', y='KID_inf', label=label)
+    sns.lineplot(data=dict_val_kid[temp], x='epoch', y='KID_inf', label=label, color=temp_colors[TEMPS.index(temp)])
 plt.xlabel("Epoch")
 plt.ylabel(r"$\overline{KID}_\infty$")
 plt.title(f'Average ' + r"$\overline{KID}_\infty$" + f' for {NUM_EXPERIMENTS} Experiments')
 plt.savefig(f"results/{DATA_NAME}/evolutions/kid.png")
 
-# 6. MIFID
+# 7. MIFID
 plt.figure(figsize=(10, 6))
 for batch_size in OTHER_BATCHES:
     label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
-    sns.lineplot(data=dict_other_batch_mifid[batch_size], x='epoch', y='MIFID_inf', label=label)
+    sns.lineplot(data=dict_other_batch_mifid[batch_size], x='epoch', y='MIFID_inf', label=label, color=batch_colors[OTHER_BATCHES.index(batch_size)])
 for temp in TEMPS:
     label = r'$p=$' + f'{temp}' + r", $N_{batch}=75$" if temp != 0 else r'Vanilla Model, $N_{batch}=75$'
-    sns.lineplot(data=dict_val_mifid[temp], x='epoch', y='MIFID_inf', label=label)
+    sns.lineplot(data=dict_val_mifid[temp], x='epoch', y='MIFID_inf', label=label, color=temp_colors[TEMPS.index(temp)])
 plt.xlabel("Epoch")
 plt.ylabel(r"$\overline{MIFID}_\infty$")
 plt.title(f'Average ' + r"$\overline{MIFID}_\infty$" + f' for {NUM_EXPERIMENTS} Experiments')
@@ -229,6 +264,7 @@ plt.savefig(f"results/{DATA_NAME}/evolutions/mifid.png")
 # Only vanilla model, p=0, has batch size 25 and 150
 for batch_size in OTHER_BATCHES:
     final_train_loss = dict_other_batch_train_loss[batch_size].groupby('experiment').last()
+    final_train_grad = dict_other_batch_train_grad[batch_size].groupby('experiment').last()
     final_train_grad_var = dict_other_batch_train_grad_var[batch_size].groupby('experiment').tail(2)
     final_val_loss = dict_other_batch_val_loss[batch_size].groupby('experiment').last()
     final_fid = dict_other_batch_fid[batch_size].groupby('experiment').last()
@@ -236,6 +272,7 @@ for batch_size in OTHER_BATCHES:
     final_mifid = dict_other_batch_mifid[batch_size].groupby('experiment').last()
 
     final_train_loss['temp'] = r"Vanilla Model " + f"{batch_size}"
+    final_train_grad['temp'] = r"Vanilla Model " + f"{batch_size}"
     final_train_grad_var['temp'] = r"Vanilla Model " + f"{batch_size}"
     final_val_loss['temp'] = r"Vanilla Model " + f"{batch_size}"
     final_fid['temp'] = r"Vanilla Model " + f"{batch_size}"
@@ -244,6 +281,7 @@ for batch_size in OTHER_BATCHES:
 
     if batch_size == OTHER_BATCHES[0]:
         all_final_train_loss = final_train_loss
+        all_final_train_grad = final_train_grad
         all_final_train_grad_var = final_train_grad_var
         all_final_val_loss = final_val_loss
         all_final_fid = final_fid
@@ -252,6 +290,7 @@ for batch_size in OTHER_BATCHES:
     
     else:
         all_final_train_loss = pd.concat([all_final_train_loss, final_train_loss])
+        all_final_train_grad = pd.concat([all_final_train_grad, final_train_grad])
         all_final_train_grad_var = pd.concat([all_final_train_grad_var, final_train_grad_var])
         all_final_val_loss = pd.concat([all_final_val_loss, final_val_loss])
         all_final_fid = pd.concat([all_final_fid, final_fid])
@@ -262,6 +301,7 @@ for batch_size in OTHER_BATCHES:
 
 for temp in TEMPS:
     final_train_loss = dict_train_loss[temp].groupby('experiment').last()
+    final_train_grad = dict_train_grad[temp].groupby('experiment').last()
     final_train_grad_var = dict_train_grad_var[temp].groupby('experiment').tail(2)
     final_val_loss = dict_val_loss[temp].groupby('experiment').last()
     final_fid = dict_val_fid[temp].groupby('experiment').last()
@@ -269,6 +309,7 @@ for temp in TEMPS:
     final_mifid = dict_val_mifid[temp].groupby('experiment').last()
 
     final_train_loss['temp'] = f"p={temp}" if temp != 0 else "Vanilla Model"
+    final_train_grad['temp'] = f"p={temp}" if temp != 0 else "Vanilla Model"
     final_train_grad_var['temp'] = f"p={temp}" if temp != 0 else "Vanilla Model"
     final_val_loss['temp'] = f"p={temp}" if temp != 0 else "Vanilla Model"
     final_fid['temp'] = f"p={temp}" if temp != 0 else "Vanilla Model"
@@ -276,6 +317,7 @@ for temp in TEMPS:
     final_mifid['temp'] = f"p={temp}" if temp != 0 else "Vanilla Model"
 
     all_final_train_loss = pd.concat([all_final_train_loss, final_train_loss])
+    all_final_train_grad = pd.concat([all_final_train_grad, final_train_grad])
     all_final_train_grad_var = pd.concat([all_final_train_grad_var, final_train_grad_var])
     all_final_val_loss = pd.concat([all_final_val_loss, final_val_loss])
     all_final_fid = pd.concat([all_final_fid, final_fid])
@@ -288,6 +330,12 @@ sns.boxplot(data=all_final_train_loss, x='Train Loss', y='temp', fill=False, ori
 plt.ylabel(r"$-\log(p(\mathbf{x}|\theta))$")
 plt.title(f'Final Train Loss for {NUM_EXPERIMENTS} Experiments')
 plt.savefig(f"results/{DATA_NAME}/boxplots/final_train_loss.png")
+
+plt.figure(figsize=(15, 3))
+sns.boxplot(data=all_final_train_grad, x='Train Grad', y='temp', fill=False, orient='h', hue='temp')
+plt.ylabel(r"$\nabla_\theta \log(p(\mathbf{x}|\theta))$")
+plt.title(f'Final Train Gradient for {NUM_EXPERIMENTS} Experiments')
+plt.savefig(f"results/{DATA_NAME}/boxplots/final_train_grad.png")
 
 plt.figure(figsize=(15, 3))
 sns.boxplot(data=all_final_train_grad_var, x='Train Grad Var', y='temp', fill=False, orient='h', hue='temp')
@@ -331,16 +379,16 @@ grad_var_p = all_final_train_grad_var[all_final_train_grad_var['temp'] != 'Vanil
 for batch_size in OTHER_BATCHES:
     grad_var_p = grad_var_p[grad_var_p['temp'] != f'Vanilla Model {batch_size}']
                             
-# Variation with Batch Size
+# Variation with Batch Size using colour map for batch sizes
 plt.figure(figsize=(15, 3))
-sns.boxplot(data=grad_var_bsize, x='Train Grad Var', y='temp', fill=False, orient='h', hue='temp')
+sns.boxplot(data=grad_var_bsize, x='Train Grad Var', y='temp', fill=False, orient='h', hue='temp', palette=batch_colors)
 plt.ylabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p(\mathbf{x}|\theta))\right]$")
 plt.title(f'Gradient Variance against Batch Size for {NUM_EXPERIMENTS} Experiments')
 plt.savefig(f"results/{DATA_NAME}/boxplots/grad_var_bsize.png")
 
 # Variation with temperature
 plt.figure(figsize=(15, 5))
-sns.boxplot(data=grad_var_p, x='Train Grad Var', y='temp', fill=False, orient='h', hue='temp')
+sns.boxplot(data=grad_var_p, x='Train Grad Var', y='temp', fill=False, orient='h', hue='temp', palette=temp_colors)
 plt.ylabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p(\mathbf{x}|\theta))\right]$")
 plt.title(f'Gradient Variance against Temperature Power for {NUM_EXPERIMENTS} Experiments')
 plt.savefig(f"results/{DATA_NAME}/boxplots/grad_var_p.png")
@@ -359,13 +407,13 @@ reg_points = []
 for batch_size in OTHER_BATCHES:
     label = r"Vanilla Model " + f"{batch_size}"
     plot_label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
-    plt.scatter(fid_var[fid_var['temp'] == label]['Train Grad Var'], fid_var[fid_var['temp'] == label]['FID_inf'], label=plot_label, marker='x')
+    plt.scatter(fid_var[fid_var['temp'] == label]['Train Grad Var'], fid_var[fid_var['temp'] == label]['FID_inf'], label=plot_label, marker='x', color=batch_colors[OTHER_BATCHES.index(batch_size)])
     reg_points.append(fid_var[fid_var['temp'] == label][['Train Grad Var', 'FID_inf']])
 
 for temp in TEMPS:
     label = r'p=' + f'{temp}' if temp != 0 else r'Vanilla Model'
     plot_label = r'p=' + f'{temp}' + r', $N_{batch}=75$' if temp != 0 else r'Vanilla Model, $N_{batch}=75$'
-    plt.scatter(fid_var[fid_var['temp'] == label]['Train Grad Var'], fid_var[fid_var['temp'] == label]['FID_inf'], label=plot_label, marker='x')
+    plt.scatter(fid_var[fid_var['temp'] == label]['Train Grad Var'], fid_var[fid_var['temp'] == label]['FID_inf'], label=plot_label, marker='x', color=temp_colors[TEMPS.index(temp)])
 
     if temp != 0.1 and temp != 0.3:
         reg_points.append(fid_var[fid_var['temp'] == label][['Train Grad Var', 'FID_inf']])
@@ -390,13 +438,13 @@ reg_points = []
 for batch_size in OTHER_BATCHES:
     label = r"Vanilla Model " + f"{batch_size}"
     plot_label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
-    plt.scatter(mifid_var[mifid_var['temp'] == label]['Train Grad Var'], mifid_var[mifid_var['temp'] == label]['MIFID_inf'], label=plot_label, marker='x')
+    plt.scatter(mifid_var[mifid_var['temp'] == label]['Train Grad Var'], mifid_var[mifid_var['temp'] == label]['MIFID_inf'], label=plot_label, marker='x', color=batch_colors[OTHER_BATCHES.index(batch_size)])
     reg_points.append(mifid_var[mifid_var['temp'] == label][['Train Grad Var', 'MIFID_inf']])
 
 for temp in TEMPS:
     label = r'p=' + f'{temp}' if temp != 0 else r'Vanilla Model'
     plot_label = r'p=' + f'{temp}' + r', $N_{batch}=$75' if temp != 0 else r'Vanilla Model, $N_{batch}=$75'
-    plt.scatter(mifid_var[mifid_var['temp'] == label]['Train Grad Var'], mifid_var[mifid_var['temp'] == label]['MIFID_inf'], label=plot_label, marker='x')
+    plt.scatter(mifid_var[mifid_var['temp'] == label]['Train Grad Var'], mifid_var[mifid_var['temp'] == label]['MIFID_inf'], label=plot_label, marker='x', color=temp_colors[TEMPS.index(temp)])
 
     if temp != 0.1 and temp != 0.3:
         reg_points.append(mifid_var[mifid_var['temp'] == label][['Train Grad Var', 'MIFID_inf']])
@@ -421,13 +469,13 @@ reg_points = []
 for batch_size in OTHER_BATCHES:
     label = r"Vanilla Model " + f"{batch_size}"
     plot_label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
-    plt.scatter(kid_var[kid_var['temp'] == label]['Train Grad Var'], kid_var[kid_var['temp'] == label]['KID_inf'], label=plot_label, marker='x')
+    plt.scatter(kid_var[kid_var['temp'] == label]['Train Grad Var'], kid_var[kid_var['temp'] == label]['KID_inf'], label=plot_label, marker='x', color=batch_colors[OTHER_BATCHES.index(batch_size)])
     reg_points.append(kid_var[kid_var['temp'] == label][['Train Grad Var', 'KID_inf']])
 
 for temp in TEMPS:
     label = r'p=' + f'{temp}' if temp != 0 else r'Vanilla Model'
     plot_label = r'p=' + f'{temp}' + r', $N_{batch}=75$' if temp != 0 else r'Vanilla Model, $N_{batch}=75$'
-    plt.scatter(kid_var[kid_var['temp'] == label]['Train Grad Var'], kid_var[kid_var['temp'] == label]['KID_inf'], label=plot_label, marker='x')
+    plt.scatter(kid_var[kid_var['temp'] == label]['Train Grad Var'], kid_var[kid_var['temp'] == label]['KID_inf'], label=plot_label, marker='x', color=temp_colors[TEMPS.index(temp)])
 
     if temp != 0.1 and temp != 0.3:
         reg_points.append(kid_var[kid_var['temp'] == label][['Train Grad Var', 'KID_inf']])
@@ -461,7 +509,7 @@ for batch_size in OTHER_BATCHES:
     std_fid = fid_var[fid_var['temp'] == label]['FID_inf'].std()
     mean_var = fid_var[fid_var['temp'] == label]['Train Grad Var'].mean()
     std_var = fid_var[fid_var['temp'] == label]['Train Grad Var'].std()
-    plt.errorbar(mean_var, mean_fid, xerr=std_var, yerr=std_fid, capsize=2, marker='x', label=plot_label)
+    plt.errorbar(mean_var, mean_fid, xerr=std_var, yerr=std_fid, capsize=2, marker='x', label=plot_label, color=batch_colors[OTHER_BATCHES.index(batch_size)])
 
     reg_points.append(fid_var[fid_var['temp'] == label][['Train Grad Var', 'FID_inf']])
 
@@ -473,7 +521,7 @@ for temp in TEMPS:
     std_fid = fid_var[fid_var['temp'] == label]['FID_inf'].std()
     mean_var = fid_var[fid_var['temp'] == label]['Train Grad Var'].mean()
     std_var = fid_var[fid_var['temp'] == label]['Train Grad Var'].std()
-    plt.errorbar(mean_var, mean_fid, xerr=std_var, yerr=std_fid, capsize=2, marker='x', label=plot_label)
+    plt.errorbar(mean_var, mean_fid, xerr=std_var, yerr=std_fid, capsize=2, marker='x', label=plot_label, color=temp_colors[TEMPS.index(temp)])
 
     if temp != 0.1 and temp != 0.3:
         reg_points.append(fid_var[fid_var['temp'] == label][['Train Grad Var', 'FID_inf']])
@@ -503,7 +551,7 @@ for batch_size in OTHER_BATCHES:
     std_mifid = mifid_var[mifid_var['temp'] == label]['MIFID_inf'].std()
     mean_var = mifid_var[mifid_var['temp'] == label]['Train Grad Var'].mean()
     std_var = mifid_var[mifid_var['temp'] == label]['Train Grad Var'].std()
-    plt.errorbar(mean_var, mean_mifid, xerr=std_var, yerr=std_mifid, fmt='x', label=plot_label, capsize=2)
+    plt.errorbar(mean_var, mean_mifid, xerr=std_var, yerr=std_mifid, fmt='x', label=plot_label, capsize=2, color=batch_colors[OTHER_BATCHES.index(batch_size)])
 
     reg_points.append(mifid_var[mifid_var['temp'] == label][['Train Grad Var', 'MIFID_inf']])
 
@@ -515,7 +563,7 @@ for temp in TEMPS:
     std_mifid = mifid_var[mifid_var['temp'] == label]['MIFID_inf'].std()
     mean_var = mifid_var[mifid_var['temp'] == label]['Train Grad Var'].mean()
     std_var = mifid_var[mifid_var['temp'] == label]['Train Grad Var'].std()
-    plt.errorbar(mean_var, mean_mifid, xerr=std_var, yerr=std_mifid, fmt='x', label=plot_label, capsize=2)
+    plt.errorbar(mean_var, mean_mifid, xerr=std_var, yerr=std_mifid, fmt='x', label=plot_label, capsize=2, color=temp_colors[TEMPS.index(temp)])
 
     if temp != 0.1 and temp != 0.3:
         reg_points.append(mifid_var[mifid_var['temp'] == label][['Train Grad Var', 'MIFID_inf']])
@@ -535,8 +583,9 @@ plt.title(f'Final ' + r"$\overline{MIFID}_\infty$" + ' against Gradient Variance
 plt.legend(loc='upper right')
 plt.savefig(f"results/{DATA_NAME}/relationships/mifid_var_error.png")
 
-plt.figure(figsize=(14, 6))
+plt.figure(figsize=(16, 11))
 reg_points = []
+reg_points_two = []
 for batch_size in OTHER_BATCHES:
     label = r"Vanilla Model " + f"{batch_size}"
     plot_label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
@@ -545,7 +594,7 @@ for batch_size in OTHER_BATCHES:
     std_kid = kid_var[kid_var['temp'] == label]['KID_inf'].std()
     mean_var = kid_var[kid_var['temp'] == label]['Train Grad Var'].mean()
     std_var = kid_var[kid_var['temp'] == label]['Train Grad Var'].std()
-    plt.errorbar(mean_var, mean_kid, xerr=std_var, yerr=std_kid, label=plot_label, capsize=2, marker='x')
+    plt.errorbar(mean_var, mean_kid, xerr=std_var, yerr=std_kid, label=plot_label, capsize=2, marker='x', color=batch_colors[OTHER_BATCHES.index(batch_size)])
 
     reg_points.append(kid_var[kid_var['temp'] == label][['Train Grad Var', 'KID_inf']])
 
@@ -557,10 +606,12 @@ for temp in TEMPS:
     std_kid = kid_var[kid_var['temp'] == label]['KID_inf'].std()
     mean_var = kid_var[kid_var['temp'] == label]['Train Grad Var'].mean()
     std_var = kid_var[kid_var['temp'] == label]['Train Grad Var'].std()
-    plt.errorbar(mean_var, mean_kid, xerr=std_var, yerr=std_kid, label=plot_label, capsize=2, marker='x')
+    plt.errorbar(mean_var, mean_kid, xerr=std_var, yerr=std_kid, label=plot_label, capsize=2, marker='x', color=temp_colors[TEMPS.index(temp)])
 
-    if temp != 0.1 and temp != 0.3:
+    if temp != 0.1 and temp != 0.3 and temp != 1:
         reg_points.append(kid_var[kid_var['temp'] == label][['Train Grad Var', 'KID_inf']])
+    else:
+        reg_points_two.append(kid_var[kid_var['temp'] == label][['Train Grad Var', 'KID_inf']])
 
 # Remove outliers
 reg_points = pd.concat(reg_points)
@@ -568,7 +619,13 @@ mean = reg_points['KID_inf'].mean()
 std = reg_points['KID_inf'].std()
 reg_points = reg_points[~(reg_points['KID_inf'] > mean + 1.5 * std)]
 
-sns.regplot(x='Train Grad Var', y='KID_inf', data=reg_points, scatter=False, label='Regression', order=2)
+reg_points_two = pd.concat(reg_points_two)
+mean = reg_points_two['KID_inf'].mean()
+std = reg_points_two['KID_inf'].std()
+reg_points_two = reg_points_two[~(reg_points_two['KID_inf'] > mean + 3 * std)]
+
+sns.regplot(x='Train Grad Var', y='KID_inf', data=reg_points, scatter=False, label=r'Regression $p>1$', order=2)
+sns.regplot(x='Train Grad Var', y='KID_inf', data=reg_points_two, scatter=False, label=r'Regression $0<p \leq 1 $', order=2)
 plt.xlabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p(\mathbf{x}|\theta))\right]$")
 plt.ylabel(r"$\overline{KID}_\infty$")
 #plt.xscale('log')
@@ -584,7 +641,7 @@ plt.figure(figsize=(10, 6))
 for temp in TEMPS:
     if temp != 0:
         grad_var = dict_train_grad_var[temp].groupby('experiment').last()['Train Grad Var'].values
-        plt.errorbar(temp, np.mean(grad_var), yerr=np.std(grad_var), fmt='x', capsize=2)
+        plt.errorbar(temp, np.mean(grad_var), yerr=np.std(grad_var), fmt='x', capsize=2, label=f'p={temp}', color=temp_colors[TEMPS.index(temp)])
 plt.xlabel(r"Temperature Power, $p$")
 plt.ylabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p(\mathbf{x}|\theta))\right]$")
 plt.title(f'Train Gradient Variance for {NUM_EXPERIMENTS} Experiments')
