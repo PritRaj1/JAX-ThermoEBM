@@ -35,7 +35,7 @@ train_x = np.stack([x for x, _ in train_loader])
 val_x = np.stack([x for x, _ in val_loader])
 del val_loader, train_loader, train_data, val_data
 
-if num_temps == 10:
+if num_temps == 10 and prior_mcmc == 60:
     log_path = f"logs/{data_set_name}/p={temp_power}/batch={batch_size}"
 elif prior_mcmc != 60:
     log_path = f"extra_logs/{data_set_name}/prior_mcmc={prior_mcmc}/p={temp_power}/batch={batch_size}"
@@ -44,5 +44,5 @@ else:
 
 os.makedirs(f"{log_path}/images", exist_ok=True)
 
-for exp in tqdm.tqdm(range(2, num_exp)):
+for exp in tqdm.tqdm(range(0, num_exp)):
     run_experiment(exp, train_x, val_x, log_path)

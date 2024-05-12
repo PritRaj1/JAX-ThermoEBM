@@ -271,13 +271,13 @@ for batch_size in OTHER_BATCHES:
     final_kid = dict_other_batch_kid[batch_size].groupby('experiment').last()
     final_mifid = dict_other_batch_mifid[batch_size].groupby('experiment').last()
 
-    final_train_loss['temp'] = r"Vanilla Model " + f"{batch_size}"
-    final_train_grad['temp'] = r"Vanilla Model " + f"{batch_size}"
-    final_train_grad_var['temp'] = r"Vanilla Model " + f"{batch_size}"
-    final_val_loss['temp'] = r"Vanilla Model " + f"{batch_size}"
-    final_fid['temp'] = r"Vanilla Model " + f"{batch_size}"
-    final_kid['temp'] = r"Vanilla Model " + f"{batch_size}"
-    final_mifid['temp'] = r"Vanilla Model " + f"{batch_size}"
+    final_train_loss['temp'] = r"$N_{batch}$ =" +f"{batch_size}"
+    final_train_grad['temp'] = r"$N_{batch}$ =" +f"{batch_size}"
+    final_train_grad_var['temp'] = r"$N_{batch}$ =" +f"{batch_size}"
+    final_val_loss['temp'] = r"$N_{batch}$ =" +f"{batch_size}"
+    final_fid['temp'] = r"$N_{batch}$ =" +f"{batch_size}"
+    final_kid['temp'] = r"$N_{batch}$ =" +f"{batch_size}"
+    final_mifid['temp'] = r"$N_{batch}$ =" +f"{batch_size}"
 
     if batch_size == OTHER_BATCHES[0]:
         all_final_train_loss = final_train_loss
@@ -372,25 +372,31 @@ plt.savefig(f"results/{DATA_NAME}/boxplots/final_mifid.png")
 # Extract all 'Vanilla Model' data from all_final_train_grad_var
 grad_var_bsize = all_final_train_grad_var[all_final_train_grad_var['temp'] == 'Vanilla Model']
 for batch_size in OTHER_BATCHES:
-    grad_var_bsize = pd.concat([grad_var_bsize, all_final_train_grad_var[all_final_train_grad_var['temp'] == f'Vanilla Model {batch_size}']])
+    grad_var_bsize = pd.concat([grad_var_bsize, all_final_train_grad_var[all_final_train_grad_var['temp'] == r"$N_{batch}$ =" +f"{batch_size}"]])
 
 # Extract all 'p' varying data from all_final_train_grad_var
 grad_var_p = all_final_train_grad_var[all_final_train_grad_var['temp'] != 'Vanilla Model']
 for batch_size in OTHER_BATCHES:
-    grad_var_p = grad_var_p[grad_var_p['temp'] != f'Vanilla Model {batch_size}']
+    grad_var_p = grad_var_p[grad_var_p['temp'] != r"$N_{batch}$ =" +f"{batch_size}"]
                             
 # Variation with Batch Size using colour map for batch sizes
-plt.figure(figsize=(15, 3))
+plt.figure(figsize=(13, 4))
 sns.boxplot(data=grad_var_bsize, x='Train Grad Var', y='temp', fill=False, orient='h', hue='temp', palette=batch_colors)
-plt.ylabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p(\mathbf{x}|\theta))\right]$")
-plt.title(f'Gradient Variance against Batch Size for {NUM_EXPERIMENTS} Experiments')
+plt.xlabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p(\mathbf{x}|\theta))\right]$")
+plt.ylabel(r"Batch Size")
+plt.xlim(0.1, 1.2)
+plt.title(f'Gradient Variance in the Vanilla Model for {NUM_EXPERIMENTS} Experiments')
+plt.tight_layout()
 plt.savefig(f"results/{DATA_NAME}/boxplots/grad_var_bsize.png")
 
 # Variation with temperature
-plt.figure(figsize=(15, 5))
+plt.figure(figsize=(13, 6))
 sns.boxplot(data=grad_var_p, x='Train Grad Var', y='temp', fill=False, orient='h', hue='temp', palette=temp_colors)
-plt.ylabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p(\mathbf{x}|\theta))\right]$")
-plt.title(f'Gradient Variance against Temperature Power for {NUM_EXPERIMENTS} Experiments')
+plt.xlabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p(\mathbf{x}|\theta))\right]$")
+plt.ylabel(r"Temperature Power")
+plt.xlim(0.1, 1.2)
+plt.title(f'Gradient Variance in the Altered Model for {NUM_EXPERIMENTS} Experiments')
+plt.tight_layout()
 plt.savefig(f"results/{DATA_NAME}/boxplots/grad_var_p.png")
 
 
@@ -405,7 +411,7 @@ kid_var = pd.merge(all_final_train_grad_var, all_final_kid, on=['experiment', 't
 plt.figure(figsize=(14, 6))
 reg_points = []
 for batch_size in OTHER_BATCHES:
-    label = r"Vanilla Model " + f"{batch_size}"
+    label = r"$N_{batch}$ =" +f"{batch_size}"
     plot_label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
     plt.scatter(fid_var[fid_var['temp'] == label]['Train Grad Var'], fid_var[fid_var['temp'] == label]['FID_inf'], label=plot_label, marker='x', color=batch_colors[OTHER_BATCHES.index(batch_size)])
     reg_points.append(fid_var[fid_var['temp'] == label][['Train Grad Var', 'FID_inf']])
@@ -436,7 +442,7 @@ plt.savefig(f"results/{DATA_NAME}/relationships/fid_var.png")
 plt.figure(figsize=(14, 6))
 reg_points = []
 for batch_size in OTHER_BATCHES:
-    label = r"Vanilla Model " + f"{batch_size}"
+    label = r"$N_{batch}$ =" +f"{batch_size}"
     plot_label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
     plt.scatter(mifid_var[mifid_var['temp'] == label]['Train Grad Var'], mifid_var[mifid_var['temp'] == label]['MIFID_inf'], label=plot_label, marker='x', color=batch_colors[OTHER_BATCHES.index(batch_size)])
     reg_points.append(mifid_var[mifid_var['temp'] == label][['Train Grad Var', 'MIFID_inf']])
@@ -467,7 +473,7 @@ plt.savefig(f"results/{DATA_NAME}/relationships/mifid_var.png")
 plt.figure(figsize=(14, 6))
 reg_points = []
 for batch_size in OTHER_BATCHES:
-    label = r"Vanilla Model " + f"{batch_size}"
+    label = r"$N_{batch}$ =" +f"{batch_size}"
     plot_label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
     plt.scatter(kid_var[kid_var['temp'] == label]['Train Grad Var'], kid_var[kid_var['temp'] == label]['KID_inf'], label=plot_label, marker='x', color=batch_colors[OTHER_BATCHES.index(batch_size)])
     reg_points.append(kid_var[kid_var['temp'] == label][['Train Grad Var', 'KID_inf']])
@@ -502,7 +508,7 @@ kid_var = pd.merge(all_final_train_grad_var, all_final_kid, on=['experiment', 't
 plt.figure(figsize=(14, 6))
 reg_points = []
 for batch_size in OTHER_BATCHES:
-    label = r"Vanilla Model " + f"{batch_size}"
+    label = r"$N_{batch}$ =" +f"{batch_size}"
     plot_label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
 
     mean_fid = fid_var[fid_var['temp'] == label]['FID_inf'].mean()
@@ -544,7 +550,7 @@ plt.savefig(f"results/{DATA_NAME}/relationships/fid_var_error.png")
 plt.figure(figsize=(14, 6))
 reg_points = []
 for batch_size in OTHER_BATCHES:
-    label = r"Vanilla Model " + f"{batch_size}"
+    label = r"$N_{batch}$ =" +f"{batch_size}"
     plot_label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
 
     mean_mifid = mifid_var[mifid_var['temp'] == label]['MIFID_inf'].mean()
@@ -587,7 +593,7 @@ plt.figure(figsize=(16, 11))
 reg_points = []
 reg_points_two = []
 for batch_size in OTHER_BATCHES:
-    label = r"Vanilla Model " + f"{batch_size}"
+    label = r"$N_{batch}$ =" +f"{batch_size}"
     plot_label = r'Vanilla Model, $N_{batch}=$' + f'{batch_size}'
 
     mean_kid = kid_var[kid_var['temp'] == label]['KID_inf'].mean()

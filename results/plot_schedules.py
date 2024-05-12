@@ -30,13 +30,15 @@ plt.title("Parameter update")
 plt.savefig("results/lr_schedule.png")
 
 p_list = [0, 0.3, 0.1, 1, 2, 3, 6, 10]
+temp_cmap = plt.get_cmap('coolwarm')
+temp_colors = [temp_cmap(i) for i in np.linspace(0, 1, len(p_list))]
 num_temps = 100
 
 plt.figure(figsize=(10, 6))
 for p in p_list:
     temp = np.linspace(0, 1, num_temps) ** p
     label = "p = {}".format(p)
-    plt.plot(temp, label=label)
+    plt.plot(temp, label=label, color=temp_colors[p_list.index(p)])
 plt.xlabel("Schedule Index")
 plt.ylabel("Temperature")
 plt.title("Temperature Schedule")
