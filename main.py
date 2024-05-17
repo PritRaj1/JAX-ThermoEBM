@@ -22,6 +22,7 @@ num_exp = int(parser["PIPELINE"]["NUM_EXPERIMENTS"])
 temp_power = float(parser["TEMP"]["TEMP_POWER"])
 num_temps = int(parser["TEMP"]["NUM_TEMPS"])
 prior_mcmc = int(parser["MCMC"]["E_SAMPLE_STEPS"])
+posterior_mcmc = int(parser["MCMC"]["G_SAMPLE_STEPS"])
 dataset, val_dataset = get_data(data_set_name)
 
 # Take a subset of the dataset to ease computation
@@ -39,6 +40,8 @@ if num_temps == 10 and prior_mcmc == 60:
     log_path = f"logs/{data_set_name}/p={temp_power}/batch={batch_size}"
 elif prior_mcmc != 60:
     log_path = f"extra_logs/{data_set_name}/prior_mcmc={prior_mcmc}/p={temp_power}/batch={batch_size}"
+elif posterior_mcmc != 20:
+    log_path = f"extra_logs/{data_set_name}/posterior_mcmc={posterior_mcmc}/p={temp_power}/batch={batch_size}"
 else:
     log_path = f"extra_logs/{data_set_name}/temps={num_temps}/p={temp_power}/batch={batch_size}"
 
