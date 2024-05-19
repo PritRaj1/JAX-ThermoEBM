@@ -23,7 +23,8 @@ temp_power = float(parser["TEMP"]["TEMP_POWER"])
 num_temps = int(parser["TEMP"]["NUM_TEMPS"])
 prior_mcmc = int(parser["MCMC"]["E_SAMPLE_STEPS"])
 posterior_mcmc = int(parser["MCMC"]["G_SAMPLE_STEPS"])
-beta = bool(parser["TEMP"]["KL_BIAS_WEIGHT"])
+beta = float(parser["TEMP"]["KL_BIAS_WEIGHT"])
+
 dataset, val_dataset = get_data(data_set_name)
 
 # Take a subset of the dataset to ease computation

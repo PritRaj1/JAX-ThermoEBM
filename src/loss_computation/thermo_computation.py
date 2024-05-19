@@ -14,8 +14,7 @@ batch_size = int(parser["PIPELINE"]["BATCH_SIZE"])
 z_channels = int(parser["EBM"]["Z_CHANNELS"])
 temp_power = float(parser["TEMP"]["TEMP_POWER"])
 num_temps = int(parser["TEMP"]["NUM_TEMPS"])
-beta = bool(parser["TEMP"]["KL_BIAS_WEIGHT"])
-
+beta = float(parser["TEMP"]["KL_BIAS_WEIGHT"])
 temp_schedule = jnp.linspace(0, 1, num_temps) ** temp_power
 batched_llhood = jax.vmap(llhood, in_axes=(0, 0, None, None, None))
 
