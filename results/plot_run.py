@@ -15,7 +15,7 @@ sns.set(font_scale=1.5)
 sns.set_style("whitegrid", rc ={'text.usetex' : True, 'font.family' : 'serif', 'font.serif' : ['Computer Modern']})
 
 NUM_EXPERIMENTS = 5
-TEMPS = [0.1, 1, 3, 6, 10]
+TEMPS = [0.1, 0.3, 1, 3, 6, 10]
 BATCH_SIZE = 75
 OTHER_BATCHES = [25, 50, 75, 150]
 
@@ -38,7 +38,7 @@ dict_val_mifid = {}
 for temp in TEMPS:
 
     # Load the data
-    log_path = f"logs/{DATA_NAME}/p={temp}/batch={BATCH_SIZE}/"
+    log_path = f"logs/{DATA_NAME}/p={temp}/batch={BATCH_SIZE}"
     for i in range(NUM_EXPERIMENTS):
         df = pd.read_csv(f"{log_path}/experiment{i}.csv")
 
@@ -620,12 +620,14 @@ for temp in TEMPS:
         reg_points.append(kid_var[kid_var['temp'] == label][['Train Grad Var', 'KID_inf']])
     else:
         reg_points_two.append(kid_var[kid_var['temp'] == label][['Train Grad Var', 'KID_inf']])
+    if temp == 1:
+        reg_points.append(kid_var[kid_var['temp'] == label][['Train Grad Var', 'KID_inf']])
 
 # Remove outliers
 reg_points = pd.concat(reg_points)
 mean = reg_points['KID_inf'].mean()
 std = reg_points['KID_inf'].std()
-reg_points = reg_points[~(reg_points['KID_inf'] > mean + 1.5 * std)]
+reg_points = reg_points[~(reg_points['KID_inf'] > mean + 10 * std)]
 
 reg_points_two = pd.concat(reg_points_two)
 mean = reg_points_two['KID_inf'].mean()
@@ -639,15 +641,16 @@ reg_points_three = reg_points_three[~(reg_points_three['KID_inf'] > mean + 3 * s
 
 sns.regplot(x='Train Grad Var', y='KID_inf', data=reg_points_three, scatter=False, label=r'Regression Vanilla Model', order=2, truncate=False)
 sns.regplot(x='Train Grad Var', y='KID_inf', data=reg_points_two, scatter=False, label=r'Regression $0<p<1 $', order=2, truncate=False)
-sns.regplot(x='Train Grad Var', y='KID_inf', data=reg_points, scatter=False, label=r'Regression $p\geq1$', order=2, truncate=False)
+sns.regplot(x='Train Grad Var', y='KID_inf', data=reg_points, scatter=False, label=r'Regression $p\geq1$', order=2)#, truncate=False)
 
 plt.xlabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p_\theta(\mathbf{x}))\right]$")
 plt.ylabel(r"$\overline{KID}_\infty$")
 #plt.xscale('log')
-# plt.xlim(0.15, 1.2)
-plt.ylim(0.04, 0.14)
+# plt.xlim(0.15, 1.05)
+# plt.ylim(0.027, 0.08)
+# plt.ylim(0.04, 0.14)
 plt.title(f'Final ' + r"$\overline{KID}_\infty$" + ' against Gradient Variance')
-plt.legend(loc='upper right')
+plt.legend(loc='center right', bbox_to_anchor=(1.1, 0.5))
 plt.savefig(f"results/{DATA_NAME}/relationships/kid_var_error.png")
 
 # Plot mean train grad var against p value 
@@ -731,6 +734,8 @@ for temp in TEMPS:
         reg_points.append(kid_var[kid_var['temp'] == label][['Train Grad Var', 'KID_inf']])
     else:
         reg_points_two.append(kid_var[kid_var['temp'] == label][['Train Grad Var', 'KID_inf']])
+    if temp == 1:
+        reg_points_two.append(kid_var[kid_var['temp'] == label][['Train Grad Var', 'KID_inf']])
 
 # Remove outliers
 reg_points = pd.concat(reg_points)
@@ -757,9 +762,10 @@ sns.regplot(x='Train Grad Var', y='KID_inf', data=reg_points_two, scatter=False,
 plt.xlabel(r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p_\theta(\mathbf{x}))\right]$")
 plt.ylabel(r"$\overline{KID}_\infty$")
 #plt.xscale('log')
-# plt.xlim(0.15, 1.2)
-plt.ylim(0.04, 0.14)
+plt.xlim(0.15, 1.05)
+plt.ylim(0.027, 0.08)
+# plt.ylim(0.04, 0.14)
 plt.title(f'Final ' + r"$\overline{KID}_\infty$" + ' against Gradient Variance')
-plt.legend(loc='upper right')
+plt.legend(loc='center right')
 plt.savefig(f"results/{DATA_NAME}/relationships/kid_var_error_extra.png")
 
