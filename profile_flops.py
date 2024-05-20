@@ -7,7 +7,7 @@ import numpy as np
 import configparser
 
 from src.pipeline.initialise import *
-from src.pipeline.pipeline_steps import train_step
+from src.pipeline.pipeline_steps import val_step
 
 parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")
@@ -28,15 +28,12 @@ GEN_optimiser, GEN_opt_state = init_GEN_optimiser(GEN_params)
 # Tuple up for cleanliness
 params_tup = (EBM_params, GEN_params)
 fwd_fcn_tup = (EBM_fwd, GEN_fwd)
-optimiser_tup = (EBM_optimiser, GEN_optimiser)
-opt_state_tup = (EBM_opt_state, GEN_opt_state)
-del EBM_params, GEN_params, EBM_fwd, GEN_fwd, EBM_optimiser, GEN_optimiser, EBM_opt_state, GEN_opt_state
 
 test_x = np.random.randn(batch_size, 64, 64, 1)
 
 # Get the FLOPs estimate from the cost analysis 
-wrapped = jax.xla_computation(partial(train_step, optimiser_tup=optimiser_tup, fwd_fcn_tup=fwd_fcn_tup))
-computation = wrapped(key, test_x, params_tup, opt_state_tup)
+wrapped = jax.xla_computation(partial(val_step, fwd_fcn_tup=fwd_fcn_tup))
+computation = wrapped(key, test_x, params_tup)
 
 print(repr(computation))
 module = computation.as_hlo_module()

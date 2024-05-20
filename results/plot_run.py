@@ -4,7 +4,7 @@ import pandas as pd
 import os
 import numpy as np
 
-DATA_NAME = "CIFAR10"
+DATA_NAME = "CelebA"
 
 os.makedirs(f"results/{DATA_NAME}/evolutions", exist_ok=True)
 os.makedirs(f"results/{DATA_NAME}/boxplots", exist_ok=True)
@@ -18,7 +18,7 @@ sns.set_style(
 )
 
 NUM_EXPERIMENTS = 5
-TEMPS = [0.1, 0.3, 1, 3, 6, 10]
+TEMPS = [0.1, 0.3, 1, 2, 3, 6, 10]
 BATCH_SIZE = 75
 OTHER_BATCHES = [25, 50, 75, 150]
 
