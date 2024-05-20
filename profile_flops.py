@@ -32,19 +32,23 @@ optimiser_tup = (EBM_optimiser, GEN_optimiser)
 opt_state_tup = (EBM_opt_state, GEN_opt_state)
 del EBM_params, GEN_params, EBM_fwd, GEN_fwd, EBM_optimiser, GEN_optimiser, EBM_opt_state, GEN_opt_state
 
-jit_train = jax.jit(partial(train_step, optimiser_tup=optimiser_tup, fwd_fcn_tup=fwd_fcn_tup))
-
 test_x = np.random.randn(batch_size, 64, 64, 1)
 
-# Compile the function
-compiled_val = jit_train.lower(key, test_x, params_tup, opt_state_tup).compile()
+# Get the FLOPs estimate from the cost analysis 
+wrapped = jax.xla_computation(partial(train_step, optimiser_tup=optimiser_tup, fwd_fcn_tup=fwd_fcn_tup))
+computation = wrapped(key, test_x, params_tup, opt_state_tup)
 
-# Get the FLOPs estimate from the cost analysis
-flops = compiled_val.cost_analysis()[0]['flops']
+print(repr(computation))
+module = computation.as_hlo_module()
+print(repr(module))
+client = jax.lib.xla_bridge.get_backend()
+print(repr(client))
+analysis = jax.lib.xla_client._xla.hlo_module_cost_analysis(client, module)
+for key, value in analysis.items():
+    print('{}: {}'.format(key, value))
 
-print(f"Estimated FLOPs for jit_val: {flops}")
-
-# Append to CSV
-df = pd.DataFrame({"num_temps": [num_temps],"posterior_mcmc": [posterior_mcmc], "flops": [flops]})
-
+# Save the results
+df = pd.DataFrame({"num_temps": [num_temps],"posterior_mcmc": [posterior_mcmc], "flops": [analysis['flops']]})
 df.to_csv("results/flops.csv", mode="a", header=False, index=False)
+
+
