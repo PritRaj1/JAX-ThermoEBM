@@ -14,7 +14,32 @@ This study reveals that although there is a notable relationship between learnin
 
 ## Does learning gradient variance matter?
 
-Yes! Learning gradient variance, \( \mathrm{Var}_\theta\left[\nabla_\theta \mathcal{L}(\theta, \mathbf{x})\right] \) , does matter!
+Yes! Learning gradient variance is very important. It is reflective of the exploratory vs exploitative capacity of your neural network during training. It often has a deterministic form, (in theory):
+
+```math  
+\nabla _\theta \mathcal{L}(\theta, \mathbf{x}) = - \nabla _\theta \log(p_\theta(\mathbf{x}))
+```
+
+However, it has to be evaluated using stochastic approximation approaches, therefore in reality...
+
+```math
+\left[ \nabla_\theta \mathcal{L}(\theta, \mathbf{x}) \right] \quad \text{is a distribution!}
+```
+
+We argue that adopting a distributional standpoint regarding a neural network's learning process, and being able to shape the form of its learning gradient distribution are important steps towards improving optimisation efficiency, generalisation, and generative capacity. You want proof? Here are some artificially generated images, with their corresponding learning gradients captioned underneath:
+
+<p align="center">
+<img src="https://github.com/PritRaj1/JAX-ThermoEBM/assets/77790119/b526520f-4d92-4eb2-a458-3b0224678a6b" width="50%">
+</p>
+ 
+As you can see, increasing learning gradient variance improves image fidelity **until a minimum is achieved**, (so long as mode collapse has not occurred). Increasing further beyond this worsens image quality. In fact, this was one of the demonstrated findings of the report, which persisted across datasets:
+
+<p align="center">
+<img src="https://github.com/PritRaj1/JAX-ThermoEBM/assets/77790119/bfaa49a8-5d5c-4862-bac0-b9759e263bdc" width="50%">
+<img src="https://github.com/PritRaj1/JAX-ThermoEBM/assets/77790119/e16042e4-94af-461f-9b26-c41665f742ea" width="50%">
+</p>
+
+These plots are fairly nuanced and are covered in more depth in the report. However, the important thing is that **there is a striking relationship between image fidelity and learning gradient variance!**
 
 ## To run
 
