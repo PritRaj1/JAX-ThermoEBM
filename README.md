@@ -74,6 +74,16 @@ These plots are fairly nuanced and are covered in more depth in the report. Howe
 
 As such, more focus needs to be placed on investigating the distributional characteristics of the learning gradient, which requires a means of arbitrarily shaping what it looks like, (rather than simply minimising or maximising its variance). We show that this can be accomplished using **Thermodynamic Integration**.  
 
+## Thermodynamic Integration
+
+Batch size is another means of controlling the learning gradient variance, however it's not easy to control. Below is an experiment I ran comprising 5 repetitions. Here, batch size was varied and the range of learning gradient variances achieved across the repetitions was plotted. For reference, this is contrasted below against a model incorporating Thermodynamic Integration with a fixed batch size, and different values for a particular hyperparameter, p. 
+
+<p align="center">
+  <img src="results/CelebA/boxplots/grad_var_bsize.png" alt="Control of variance with batch size" width="50%" style="padding-right: 20px;">
+  <img src="results/CelebA/boxplots/grad_var_p.png" alt="Control of variance with p" width="50%">
+</p>
+
+Evidently, Thermodynamic Integration can achieve comparable variances to the model incorporating different batch sizes, except it achieves much greater consistency across repetitions. This means that learning gradient variance can be robustly tuned by varying p, which facilitates investigations and studies into the learning gradient variance!
 
 
 
