@@ -4,6 +4,26 @@ A JAX implementation of the Learning Latent Space Energy-Based Prior Model, pres
 
 The comprehensive **42-page** thesis has been uploaded [here](https://github.com/PritRaj1/JAX-ThermoEBM/blob/main/MEng%20Report.pdf). Everything is detailed in this document for your reference.
 
+## To run
+
+To get started, follow these steps:
+
+1. Make sure you have Python version 3.9 or higher installed.
+ 
+2. Install the required dependencies by running:
+
+```bash
+pip install -r requirements.txt
+```
+
+3. Edit the hyperparameters in the `hyperparams.ini` file according to your experiment setup.
+
+4. Run the main experiment script `main.py` to gather CSV logs. You can do this by executing:
+
+```bash
+python main.py
+```
+
 ## Introduction
 
 The performances of deep generative models depend on the distributional characteristics of their learning gradients. Despite this, the exact influence of learning gradient variance remains poorly understood, and investigations into the topic are bounded by our limited ability to control gradient variance. For example, managing gradient variance through batching alone is challenging, especially under constrained computational resources.
@@ -32,34 +52,22 @@ We argue that adopting a distributional standpoint regarding a neural network's 
 <img src="https://github.com/PritRaj1/JAX-ThermoEBM/assets/77790119/b526520f-4d92-4eb2-a458-3b0224678a6b" width="50%">
 </p>
  
-As you can see, increasing learning gradient variance improves image fidelity **until a minimum is achieved**, (so long as mode collapse has not occurred). Increasing further beyond this worsens image quality. In fact, this was one of the demonstrated findings of the report, which persisted across datasets:
+As you can see, increasing learning gradient variance improves image fidelity **until a minimum is achieved**, (so long as mode collapse has not occurred). Increasing further beyond this worsens image quality. Previous attempts at shaping the distribution of the learning gradient have sought or provided expressions to reduce or minimise variance, (see [Calderhead and Girolami (2009)](https://www.sciencedirect.com/science/article/pii/S0167947309002722) and [Faghri et al. (2007)](https://arxiv.org/abs/2007.04532)). This would make sense if the learning gradient had an analytic form, since minimising variance is akin to minimising error. However, instead...
+
+```math
+\left[ \nabla_\theta \mathcal{L}(\theta, \mathbf{x}) \right] \quad \text{is a distribution!}
+```
+
+In fact, this was one of the demonstrated findings of the report, which persisted across datasets:
 
 <p align="center">
 <img src="https://github.com/PritRaj1/JAX-ThermoEBM/assets/77790119/bfaa49a8-5d5c-4862-bac0-b9759e263bdc" width="50%">
 <img src="https://github.com/PritRaj1/JAX-ThermoEBM/assets/77790119/e16042e4-94af-461f-9b26-c41665f742ea" width="50%">
 </p>
 
-These plots are fairly nuanced and are covered in more depth in the report. However, the important thing is that **there is a striking relationship between image fidelity and learning gradient variance!**
+These plots are fairly nuanced and are covered in more depth in the report. However, the important thing is that **there is a striking relationship between image fidelity and learning gradient variance!** Minmising or maximising variance is **not necessarily the best thing to do**. Instead, more focus needs to be placed on investigating the distributional characteristics of the learning gradient, which requires a means of arbitrarily shaping what it looks like, rather than simply minimising or maximising its variance. We show that this can be accomplished using **Thermodynamic Integration**  
 
-## To run
 
-To get started, follow these steps:
-
-1. Make sure you have Python version 3.9 or higher installed.
- 
-2. Install the required dependencies by running:
-
-```bash
-pip install -r requirements.txt
-```
-
-3. Edit the hyperparameters in the `hyperparams.ini` file according to your experiment setup.
-
-4. Run the main experiment script `main.py` to gather CSV logs. You can do this by executing:
-
-```bash
-python main.py
-```
 
 
 
