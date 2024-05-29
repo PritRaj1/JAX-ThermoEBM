@@ -4,11 +4,6 @@ A JAX implementation of the Learning Latent Space Energy-Based Prior Model, pres
 
 The comprehensive **42-page** thesis has been uploaded [here](https://github.com/PritRaj1/JAX-ThermoEBM/blob/main/MEng%20Report.pdf). Everything is detailed in this document for your reference.
 
-<p align="center">
-  <img src="results/demo/all_temperature_schedule.gif" alt="Temperature Schedules" width="48%" style="padding-right: 20px;">
-  <img src="results/demo/all_integral.gif" alt="Thermodynamic Integral" width="48%">
-</p>
-
 ## To run
 
 To get started, follow these steps:
@@ -76,14 +71,102 @@ As such, more focus needs to be placed on investigating the distributional chara
 
 ## Thermodynamic Integration
 
-Batch size is another means of controlling the learning gradient variance, however it's not easy to control. Below is an experiment I ran comprising 5 repetitions. Here, batch size was varied and the range of learning gradient variances achieved across the repetitions was plotted. For reference, this is contrasted below against a model incorporating Thermodynamic Integration with a fixed batch size, and different values for a particular hyperparameter, p. 
+Batch size is another means of controlling the learning gradient variance, however it's not robust. Below is an experiment I ran comprising 5 repetitions. Here, batch size was varied and the range of learning gradient variances achieved across the repetitions was plotted. For reference, this is contrasted below against a model incorporating Thermodynamic Integration with a fixed batch size, and different values for a particular hyperparameter, $p$. 
 
 <p align="center">
   <img src="results/CelebA/boxplots/grad_var_bsize.png" alt="Control of variance with batch size" width="50%" style="padding-right: 20px;">
   <img src="results/CelebA/boxplots/grad_var_p.png" alt="Control of variance with p" width="50%">
 </p>
 
-Evidently, Thermodynamic Integration can achieve comparable variances to the model incorporating different batch sizes, except it achieves much greater consistency across repetitions. This means that learning gradient variance can be robustly tuned by varying p, which facilitates investigations and studies into the learning gradient variance!
+Evidently, Thermodynamic Integration can achieve comparable variances to the model incorporating different batch sizes, except it achieves much greater consistency across repetitions. This means that learning gradient variance can be robustly tuned by varying $p$, which facilitates important investigations into the learning gradient variance!
+
+### What is it?
+
+Thermodynamic Integration alters the marginal likelihood evaluation, (which is used as the negated loss for maximum likelihood training - coded up [here](https://github.com/PritRaj1/JAX-ThermoEBM/tree/main/src/loss_computation)).
+
+Below is the vanilla formulation used to evaluate the marginal likelihood in latent space modelling. It requires marginalising across the entire latent space:
+
+```math
+\log(p_\theta(\mathbf{x}))=\mathbb{E}_{p_\theta(\mathbf{z}|\mathbf{x})}\left[ \log(p_\theta(\mathbf{x},\mathbf{z})) \right]
+```
+
+The expectation above requires sampling from the Bayesian posterior distribution.
+
+```math
+p_\theta(\mathbf{z}|\mathbf{x})=\frac{p_\beta(\mathbf{x}|\mathbf{z})p_\alpha(\mathbf{z})}{\mathcal{Z}(\mathbf{x})}
+```
+
+Thermodynamic Integration replaces this marginal likelihood evaluation with the following integral, (derivation in [Calderhead and Girolami (2009)](https://www.sciencedirect.com/science/article/pii/S0167947309002722)):
+
+```math
+\log(p_\theta(\mathbf{x}))=\textcolor{red}{\int_0^1} \mathbb{E}_{p_\theta(\mathbf{z}|\mathbf{x},\textcolor{red}{t})}\left[ \log p_\beta(\mathbf{x}|\mathbf{z})\right] \, \textcolor{red}{dt}
+```
+This thermodynamic integral accumulates the expected likelihood, evaluated using samples from a special tempered distribution known as the power posterior distribution:
+
+```math
+p_\theta(\mathbf{z}|\mathbf{x},\textcolor{red}{t})=\frac{p_\beta(\mathbf{x}|\mathbf{z})^{\textcolor{red}{t}}p_\alpha(\mathbf{z})}{\mathcal{Z}(\mathbf{x}|\textcolor{red}{t})}
+```
+
+This is very important. At t=0, a sample from the power posterior is simply a sample from the prior distribution. At t=1, a sample from the power posterior is a sample from the true Bayesian posterior distribution. The prior distribution, with no features from the data space, is a much simpler distribution to explore and sample from than the Bayesian posterior distribution. Between t=0 and t=1, the integral progresses through increasingly intricate intermediary distributions:
+
+<p align="center">
+  <img src="results/demo/tempering_prior.png" alt="Prior Distribution" width="30%" style="padding-right: 20px;">
+  <img src="results/demo/tempering.gif" alt="Intermediary Distributions" width="30%" style="padding-right: 20px;">
+ <img src="results/demo/tempering_posterior.png" alt="Posterior Distribution" width="30%"">
+</p>
+
+(Note: the above distributions are unnormalised)
+
+Therefore, the exploratory vs exploitative nature of this marginal likelihood evaluation is directly influenced by the choice of temperature schedule adopted. The exact calculation of the thermodynamic integral remains practically infeasible, so instead the temperature schedule is instead discretised as:
+
+```math
+    \left\{t_1, t_2, \ldots t_{N_{\text{t}}}\right\}\, \text{for}\, t_i \in [0,1]
+```
+
+Here, $t_i$ denotes the tempering at the $i$ th index of the schedule, and $N_{\text{t}}$ is the number of temperatures. As such, the the marginal likelihood evaluation is approximated as:
+
+```math
+\log p_\theta(\mathbf{x}) \approx \frac{1}{2} \sum_i \Delta t_i (E_{i-1} + E_{i})
+```
+
+Where:
+
+```math
+\Delta t_i = t_i - t_{i-1}
+```
+
+```math
+E_i = \mathbb{E}_{p_\theta(\mathbf{z}|\mathbf{x},t_i)} \left[ \log p_{\theta}(\mathbf{x}|\mathbf{z})\right]
+```
+
+This is equivalent to the trapezoidal rule for numerical integration. Now, you can't change the maths, but **you can change the discretisation** used to schedule the intermediary distributions that the integral steps through:
+
+```math
+t_i = \left(\frac{i}{N_{\text{t}}}\right)^p \quad \forall i \in \{1, \ldots, N_{\text{t}}\}
+```
+
+This is how p is incorporated! It's a power law schedule that **bends** the temperature schedule:
+
+<p align="center">
+  <img src="https://github.com/PritRaj1/JAX-ThermoEBM/assets/77790119/595d7dac-e69b-4155-b522-f65055a7c228" alt="Temperature Schedule" width="50%">
+</p>
+
+This doesn't change the form of the integral, the maths is intact! However, **the approximation** - how the area under the curve has been estimated - has changed! We still aim to approximate the integral by accumulating bins under the $E_i$ function, however the width of these bins are no longer uniform when $p$ is altered:
+
+<p align="center">
+  <img src="results/demo/all_temperature_schedule.gif" alt="Temperature Schedules" width="48%" style="padding-right: 20px;">
+  <img src="results/demo/all_integral.gif" alt="Thermodynamic Integral" width="48%">
+</p>
+
+A large value of $p$ corresponds to a larger number of partitions or bins skewed towards the lower temperatures, i.e. the simpler intermediary distributions. A smaller value of $p$ corresponds to more partitions favouring the higher temperatures, i.e. the more intricate, data-informed distributions. Therefore, **the value of $p$ tips the balance between exploration and exploitation of the posterior distribution!**
+
+This is how we parameterised the learning gradient variance. Different temperature schedules facilitate more or less variance to manifest in the log-marginal likelihood, which in turn manifests in the learning gradient.
+
+Of course, as complicated as this is, there's much more to this study, (hence the 42-page report). The latent space energy-based prior model is an entire topic to explore itself. Additionally, quantifying the perceptual quality of a set of artificially-generated images (in an unbiased manner) was also very challenging too. The [report]([url](https://github.com/PritRaj1/JAX-ThermoEBM/blob/main/MEng%20Report.pdf)) stands as a more in-depth outline of everything I did.
+
+Thanks!
+
+
 
 
 
