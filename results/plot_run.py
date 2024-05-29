@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import os
 import numpy as np
+import matplotlib.cm as cm
 
 DATA_NAME = "CelebA"
 
@@ -11,7 +12,7 @@ os.makedirs(f"results/{DATA_NAME}/boxplots", exist_ok=True)
 os.makedirs(f"results/{DATA_NAME}/relationships", exist_ok=True)
 
 # Set plot styling
-sns.set(font_scale=1.5)
+sns.set(font_scale=1.75)
 sns.set_style(
     "whitegrid",
     rc={"text.usetex": True, "font.family": "serif", "font.serif": ["Computer Modern"]},
@@ -28,6 +29,8 @@ temp_colors = [temp_cmap(i) for i in np.linspace(0, 1, len(TEMPS))]
 batch_cmap = plt.get_cmap("summer")
 batch_colors = [batch_cmap(i) for i in np.linspace(0, 1, len(OTHER_BATCHES))]
 temp_colors[3] = "black"
+batch_colors[-1] = "magenta"
+custom_colors = [cm.coolwarm(0 / 256), cm.magma(80 / 256), cm.magma(150 / 256), cm.magma(210 / 256)]
 
 # Dictionaries for train_loss, train_grad_var, val_loss, and val_FID at each temperature
 dict_train_loss = {}
@@ -604,7 +607,7 @@ sns.boxplot(
     x="Train Grad Var",
     y="temp",
     fill=False,
-    orient="h",
+    # orient="h",
     hue="temp",
     palette=batch_colors,
 )
@@ -612,7 +615,7 @@ plt.xlabel(
     r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p_\theta(\mathbf{x}))\right]$"
 )
 plt.ylabel(r"Batch Size")
-# plt.xlim(0.1, 1.2)
+plt.xlim(0.1, 1.2)
 plt.title(f"Gradient Variance in the Vanilla Model for {NUM_EXPERIMENTS} Experiments")
 plt.tight_layout()
 plt.savefig(f"results/{DATA_NAME}/boxplots/grad_var_bsize.png")
@@ -624,7 +627,7 @@ sns.boxplot(
     x="Train Grad Var",
     y="temp",
     fill=False,
-    orient="h",
+    # orient="h",
     hue="temp",
     palette=temp_colors,
 )
@@ -632,7 +635,7 @@ plt.xlabel(
     r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p_\theta(\mathbf{x}))\right]$"
 )
 plt.ylabel(r"Temperature Power")
-# plt.xlim(0.1, 1.2)
+plt.xlim(0.1, 1.2)
 plt.title(f"Gradient Variance in the Altered Model for {NUM_EXPERIMENTS} Experiments")
 plt.tight_layout()
 plt.savefig(f"results/{DATA_NAME}/boxplots/grad_var_p.png")
@@ -1042,6 +1045,9 @@ for temp in TEMPS:
             kid_var[kid_var["temp"] == label][["Train Grad Var", "KID_inf"]]
         )
     if temp == 1:
+        reg_points_two.append(
+            kid_var[kid_var["temp"] == label][["Train Grad Var", "KID_inf"]]
+        )
         reg_points.append(
             kid_var[kid_var["temp"] == label][["Train Grad Var", "KID_inf"]]
         )
@@ -1069,14 +1075,14 @@ sns.regplot(
     scatter=False,
     label=r"Regression Vanilla Model",
     order=2,
-    truncate=False,
+    # truncate=False,
 )
 sns.regplot(
     x="Train Grad Var",
     y="KID_inf",
     data=reg_points_two,
     scatter=False,
-    label=r"Regression $0<p<1 $",
+    label=r"Regression $0<p\leq1 $",
     order=2,
     truncate=False,
 )
@@ -1085,9 +1091,9 @@ sns.regplot(
     y="KID_inf",
     data=reg_points,
     scatter=False,
-    label=r"Regression $p\geq1$",
+    label=r"Regression $p>1$",
     order=2,
-)  # , truncate=False)
+    truncate=True)
 
 plt.xlabel(
     r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p_\theta(\mathbf{x}))\right]$"
@@ -1095,10 +1101,11 @@ plt.xlabel(
 plt.ylabel(r"$\overline{KID}_\infty$")
 # plt.xscale('log')
 # plt.xlim(0.15, 1.05)
-# plt.ylim(0.027, 0.08)
+# plt.ylim(0.027, 0.085)
 # plt.ylim(0.04, 0.14)
 plt.title(f"Final " + r"$\overline{KID}_\infty$" + " against Gradient Variance")
-plt.legend(loc="center right", bbox_to_anchor=(1.1, 0.5))
+# plt.legend(loc="center right", bbox_to_anchor=(1.1, 0.5))
+plt.legend(loc="lower right")
 plt.savefig(f"results/{DATA_NAME}/relationships/kid_var_error.png")
 
 # Plot mean train grad var against p value
@@ -1242,6 +1249,7 @@ for temp in TEMPS:
             label=plot_label,
             capsize=2,
             marker="x",
+            color=custom_colors[0],
         )
     if temp != 0.1 and temp != 0.3 and temp != 1:
         reg_points.append(
@@ -1260,17 +1268,17 @@ for temp in TEMPS:
 reg_points = pd.concat(reg_points)
 mean = reg_points["KID_inf"].mean()
 std = reg_points["KID_inf"].std()
-reg_points = reg_points[~(reg_points["KID_inf"] > mean + 1.5 * std)]
+reg_points = reg_points[~(reg_points["KID_inf"] > mean + 10 * std)]
 
 reg_points_two = pd.concat(reg_points_two)
 mean = reg_points_two["KID_inf"].mean()
 std = reg_points_two["KID_inf"].std()
-reg_points_two = reg_points_two[~(reg_points_two["KID_inf"] > mean + 3 * std)]
+reg_points_two = reg_points_two[~(reg_points_two["KID_inf"] > mean + 10 * std)]
 
 reg_points_three = pd.concat(reg_points_three)
 mean = reg_points_three["KID_inf"].mean()
 std = reg_points_three["KID_inf"].std()
-reg_points_three = reg_points_three[~(reg_points_three["KID_inf"] > mean + 3 * std)]
+reg_points_three = reg_points_three[~(reg_points_three["KID_inf"] > mean + 10 * std)]
 
 # Plot error bars for new data
 plt.errorbar(
@@ -1281,6 +1289,7 @@ plt.errorbar(
     label=r"$p=0.1, N_t=30, K_{\mathbf{z}|\mathbf{x},t}=20$",
     capsize=2,
     marker="x",
+    color=custom_colors[-1],
 )
 plt.errorbar(
     final_forty_steps_var["Train Grad Var"].mean(),
@@ -1290,6 +1299,7 @@ plt.errorbar(
     label=r"$p=0.1, N_t=10, K_{\mathbf{z}|\mathbf{x},t}=40$",
     capsize=2,
     marker="x",
+    color=custom_colors[-2],
 )
 plt.errorbar(
     final_eta_steps_var["Train Grad Var"].mean(),
@@ -1299,6 +1309,7 @@ plt.errorbar(
     label=r"$p=0.1, N_t=10, K_{\mathbf{z}|\mathbf{x},t}=20, \eta=2.0$",
     capsize=2,
     marker="x",
+    color=custom_colors[-3],
 )
 sns.regplot(
     x="Train Grad Var",
@@ -1316,7 +1327,7 @@ sns.regplot(
     scatter=False,
     order=2,
     color="gray",
-    truncate=False,
+    truncate=True,
 )
 sns.regplot(
     x="Train Grad Var",
@@ -1332,9 +1343,170 @@ plt.xlabel(
 )
 plt.ylabel(r"$\overline{KID}_\infty$")
 # plt.xscale('log')
-plt.xlim(0.15, 1.05)
-plt.ylim(0.027, 0.085)
+# plt.xlim(0.15, 1.05)
+# plt.ylim(0.027, 0.085)
 # plt.ylim(0.04, 0.14)
 plt.title(f"Final " + r"$\overline{KID}_\infty$" + " against Gradient Variance")
 plt.legend(loc="center right")
 plt.savefig(f"results/{DATA_NAME}/relationships/kid_var_error_extra.png")
+
+
+### Sub plots ###
+fig, axs = plt.subplots(1, 3, figsize=(24,8))
+reg_points = []
+reg_points_two = []
+reg_points_three = []
+for batch_size in OTHER_BATCHES:
+    label = r"$N_{batch}$ =" + f"{batch_size}"
+    plot_label = r"Vanilla Model, $N_{batch}=$" + f"{batch_size}"
+
+    mean_kid = kid_var[kid_var["temp"] == label]["KID_inf"].mean()
+    std_kid = kid_var[kid_var["temp"] == label]["KID_inf"].std()
+    mean_var = kid_var[kid_var["temp"] == label]["Train Grad Var"].mean()
+    std_var = kid_var[kid_var["temp"] == label]["Train Grad Var"].std()
+    axs[0].errorbar(
+        mean_var,
+        mean_kid,
+        xerr=std_var,
+        yerr=std_kid,
+        capsize=2,
+        marker="x",
+        label=plot_label,
+        color=batch_colors[OTHER_BATCHES.index(batch_size)],
+    )
+
+    reg_points_three.append(
+        kid_var[kid_var["temp"] == label][["Train Grad Var", "KID_inf"]]
+    )
+
+for temp in TEMPS:
+    label = r"p=" + f"{temp}" if temp != 0 else r"Vanilla Model"
+    plot_label = (
+        r"p=" + f"{temp}" + r", $N_{batch}=75$"
+        if temp != 0
+        else r"Vanilla Model, $N_{batch}=75$"
+    )
+
+    mean_kid = kid_var[kid_var["temp"] == label]["KID_inf"].mean()
+    std_kid = kid_var[kid_var["temp"] == label]["KID_inf"].std()
+    mean_var = kid_var[kid_var["temp"] == label]["Train Grad Var"].mean()
+    std_var = kid_var[kid_var["temp"] == label]["Train Grad Var"].std()
+
+    if temp != 0.1 and temp != 0.3 and temp != 1:
+        reg_points.append(
+            kid_var[kid_var["temp"] == label][["Train Grad Var", "KID_inf"]]
+        )
+        axs[1].errorbar(
+            mean_var,
+            mean_kid,
+            xerr=std_var,
+            yerr=std_kid,
+            capsize=2,
+            marker="x",
+            label=plot_label,
+            color=temp_colors[TEMPS.index(temp)],
+        )
+    else:
+        reg_points_two.append(
+            kid_var[kid_var["temp"] == label][["Train Grad Var", "KID_inf"]]
+        )
+        axs[2].errorbar(
+            mean_var,
+            mean_kid,
+            xerr=std_var,
+            yerr=std_kid,
+            capsize=2,
+            marker="x",
+            label=plot_label,
+            color=temp_colors[TEMPS.index(temp)],
+        )
+    if temp == 1:
+        reg_points_two.append(
+            kid_var[kid_var["temp"] == label][["Train Grad Var", "KID_inf"]]
+        )
+        # reg_points.append(
+        #     kid_var[kid_var["temp"] == label][["Train Grad Var", "KID_inf"]]
+        # )
+        axs[1].errorbar(
+            mean_var,
+            mean_kid,
+            xerr=std_var,
+            yerr=std_kid,
+            capsize=2,
+            marker="x",
+            label=plot_label,
+            color=temp_colors[TEMPS.index(temp)],
+        )
+
+# Remove outliers
+reg_points = pd.concat(reg_points)
+mean = reg_points["KID_inf"].mean()
+std = reg_points["KID_inf"].std()
+reg_points = reg_points[~(reg_points["KID_inf"] > mean + 10 * std)]
+
+reg_points_two = pd.concat(reg_points_two)
+mean = reg_points_two["KID_inf"].mean()
+std = reg_points_two["KID_inf"].std()
+reg_points_two = reg_points_two[~(reg_points_two["KID_inf"] > mean + 3 * std)]
+
+reg_points_three = pd.concat(reg_points_three)
+mean = reg_points_three["KID_inf"].mean()
+std = reg_points_three["KID_inf"].std()
+reg_points_three = reg_points_three[~(reg_points_three["KID_inf"] > mean + 3 * std)]
+
+sns.regplot(
+    x="Train Grad Var",
+    y="KID_inf",
+    data=reg_points_three,
+    scatter=False,
+    order=2,
+    truncate=False,
+    ax=axs[0],
+)
+sns.regplot(
+    x="Train Grad Var",
+    y="KID_inf",
+    data=reg_points_two,
+    scatter=False,
+    order=2,
+    truncate=False,
+    ax=axs[2],
+    color=sns.color_palette("deep")[1],
+)
+sns.regplot(
+    x="Train Grad Var",
+    y="KID_inf",
+    data=reg_points,
+    scatter=False,
+    order=2,
+    truncate=False,
+    ax=axs[1],
+    color=sns.color_palette("deep")[2],
+)
+
+# Labels
+axs[0].set_xlabel(
+    r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p_\theta(\mathbf{x}))\right]$"
+)
+axs[0].set_ylabel(r"$\overline{KID}_\infty$")
+axs[0].set_title(r"Vanilla Model")
+axs[1].set_xlabel(
+    r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p_\theta(\mathbf{x}))\right]$"
+)
+axs[1].set_ylabel(r"$\overline{KID}_\infty$")
+axs[1].set_title(r"$0<p\leq1$")
+axs[2].set_xlabel(
+    r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p_\theta(\mathbf{x}))\right]$"
+)
+axs[2].set_ylabel(r"$\overline{KID}_\infty$")
+axs[2].set_title(r"$p>1$")
+
+
+
+axs[0].legend(loc="upper right")
+axs[1].legend(loc="upper right")
+axs[2].legend(loc="lower right")
+
+
+plt.tight_layout()
+plt.savefig(f"results/{DATA_NAME}/relationships/kid_var_error_subplots.png")
