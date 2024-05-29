@@ -4,6 +4,11 @@ A JAX implementation of the Learning Latent Space Energy-Based Prior Model, pres
 
 The comprehensive **42-page** thesis has been uploaded [here](https://github.com/PritRaj1/JAX-ThermoEBM/blob/main/MEng%20Report.pdf). Everything is detailed in this document for your reference.
 
+<p align="center">
+  <img src="results/demo/all_temperature_schedule.gif" alt="Temperature Schedules" width="48%" style="padding-right: 20px;">
+  <img src="results/demo/all_integral.gif" alt="Thermodynamic Integral" width="48%">
+</p>
+
 ## To run
 
 To get started, follow these steps:
@@ -24,7 +29,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-## Introduction
+## Technical Introduction
 
 The performances of deep generative models depend on the distributional characteristics of their learning gradients. Despite this, the exact influence of learning gradient variance remains poorly understood, and investigations into the topic are bounded by our limited ability to control gradient variance. For example, managing gradient variance through batching alone is challenging, especially under constrained computational resources.
 
@@ -65,7 +70,9 @@ In fact, this was one of the demonstrated findings of the report, which persiste
 <img src="https://github.com/PritRaj1/JAX-ThermoEBM/assets/77790119/e16042e4-94af-461f-9b26-c41665f742ea" width="50%">
 </p>
 
-These plots are fairly nuanced and are covered in more depth in the report. However, the important thing is that **there is a striking relationship between image fidelity and learning gradient variance!** Minmising or maximising variance is **not necessarily the best thing to do**. Instead, more focus needs to be placed on investigating the distributional characteristics of the learning gradient, which requires a means of arbitrarily shaping what it looks like, rather than simply minimising or maximising its variance. We show that this can be accomplished using **Thermodynamic Integration**  
+These plots are fairly nuanced and are covered in more depth in the report. However, the important thing is that **there is a striking relationship between image fidelity and learning gradient variance!** Minmising or maximising variance is **not necessarily the best thing to do**, and the relationships can be separated out into different regimes of operation.
+
+As such, more focus needs to be placed on investigating the distributional characteristics of the learning gradient, which requires a means of arbitrarily shaping what it looks like, (rather than simply minimising or maximising its variance). We show that this can be accomplished using **Thermodynamic Integration**.  
 
 
 
