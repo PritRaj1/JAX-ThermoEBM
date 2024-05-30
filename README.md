@@ -160,9 +160,9 @@ This doesn't change the form of the integral, the maths is intact! However, **th
 
 A large value of $p$ corresponds to a larger number of partitions or bins skewed towards the lower temperatures, i.e. the simpler intermediary distributions. A smaller value of $p$ corresponds to more partitions favouring the higher temperatures, i.e. the more intricate, data-informed distributions. Therefore, **the value of $p$ tips the balance between exploration and exploitation of the posterior distribution!**
 
-This is how we parameterised the learning gradient variance. Different temperature schedules facilitate more or less variance to manifest in the log-marginal likelihood, which in turn manifests in the learning gradient.
+This is how we parameterised the learning gradient variance. Different temperature schedules facilitate more or less variance to manifest in samples from the posterior distribution. This in turn manifests in the log-marginal likelihood, which reflects the learning gradient.
 
-Of course, as complicated as this is, there's much more to this study, (hence the 42-page report). The latent space energy-based prior model is an entire topic to explore itself. Additionally, quantifying the perceptual quality of a set of artificially-generated images (in an unbiased manner) was very challenging too. The [report]([url](https://github.com/PritRaj1/JAX-ThermoEBM/blob/main/MEng%20Report.pdf)) stands as a more in-depth outline of everything I did.
+Of course, as complicated as this is, there's much more to this study, (hence the 42-page report). The latent space energy-based prior model is an entire topic to explore itself. Additionally, quantifying the perceptual quality of a set of artificially-generated images (in an unbiased manner) was challenging too. The [report]([url](https://github.com/PritRaj1/JAX-ThermoEBM/blob/main/MEng%20Report.pdf)) stands as a more in-depth outline of everything I did.
 
 Thanks!
 
