@@ -52,5 +52,5 @@ else:
 
 os.makedirs(f"{log_path}/images", exist_ok=True)
 
-for exp in tqdm.tqdm(range(3, num_exp)):
+for exp in tqdm.tqdm(range(0, num_exp)):
     run_experiment(exp, train_x, val_x, log_path)

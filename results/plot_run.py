@@ -4,6 +4,8 @@ import pandas as pd
 import os
 import numpy as np
 import matplotlib.cm as cm
+from matplotlib.ticker import FormatStrFormatter
+import matplotlib.patches as patches
 
 DATA_NAME = "CelebA"
 
@@ -15,7 +17,13 @@ os.makedirs(f"results/{DATA_NAME}/relationships", exist_ok=True)
 sns.set(font_scale=1.75)
 sns.set_style(
     "whitegrid",
-    rc={"text.usetex": True, "font.family": "serif", "font.serif": ["Computer Modern"]},
+    rc={"text.usetex": True, 
+        "font.family": "serif", 
+        "font.serif": ["Computer Modern"], 
+        "axes.formatter.use_mathtext": True,
+        "ytick.major.formatter": FormatStrFormatter('%.2f'),
+        "xtick.major.formatter": FormatStrFormatter('%.2f')
+    },
 )
 
 NUM_EXPERIMENTS = 5
@@ -1140,31 +1148,32 @@ plt.savefig(f"results/{DATA_NAME}/relationships/power_grad_var.png")
 ### Extra plots ###
 
 # Plot thirty temps and forty steps on original kid vs grad var plot
-thiry_temps_path = f"extra_logs/CelebA/temps=30/p=0.1/batch=75"
+
+thirty_temps_path = f"extra_logs/CelebA/temps=30/p=0.1/batch=75"
 forty_steps_path = f"extra_logs/CelebA/posterior_mcmc=40/p=0.1/batch=75"
 eta_two_path = f"extra_logs/CelebA/beta=2.0/p=0.1/batch=75"
 
-for i in range(3):
-    thiry_temps_df = pd.read_csv(f"{thiry_temps_path}/experiment{i}.csv")
+for i in range(NUM_EXPERIMENTS):
+    thirty_temps_df = pd.read_csv(f"{thirty_temps_path}/experiment{i}.csv")
     forty_steps_df = pd.read_csv(f"{forty_steps_path}/experiment{i}.csv")
     eta_two_df = pd.read_csv(f"{eta_two_path}/experiment{i}.csv")
 
-    thiry_temps_df["temp"] = "p=0.1"
+    thirty_temps_df["temp"] = "p=0.1"
     forty_steps_df["temp"] = "p=0.1"
     eta_two_df["temp"] = "p=0.1"
 
     if i == 0:
-        all_thiry_temps_grad_var = thiry_temps_df["Train Grad Var"]
+        all_thirty_temps_grad_var = thirty_temps_df["Train Grad Var"]
         all_forty_steps_grad_var = forty_steps_df["Train Grad Var"]
         all_eta_steps_grad_var = eta_two_df["Train Grad Var"]
-        all_thiry_temps_kid = thiry_temps_df["KID_inf"]
+        all_thirty_temps_kid = thirty_temps_df["KID_inf"]
         all_forty_steps_kid = forty_steps_df["KID_inf"]
         all_eta_steps_kid = eta_two_df["KID_inf"]
         epochs = df["Epoch"]
 
     else:
-        all_thiry_temps_grad_var = pd.concat(
-            [all_thiry_temps_grad_var, thiry_temps_df["Train Grad Var"]], axis=1
+        all_thirty_temps_grad_var = pd.concat(
+            [all_thirty_temps_grad_var, thirty_temps_df["Train Grad Var"]], axis=1
         )
         all_forty_steps_grad_var = pd.concat(
             [all_forty_steps_grad_var, forty_steps_df["Train Grad Var"]], axis=1
@@ -1172,8 +1181,8 @@ for i in range(3):
         all_eta_steps_grad_var = pd.concat(
             [all_eta_steps_grad_var, eta_two_df["Train Grad Var"]], axis=1
         )
-        all_thiry_temps_kid = pd.concat(
-            [all_thiry_temps_kid, thiry_temps_df["KID_inf"]], axis=1
+        all_thirty_temps_kid = pd.concat(
+            [all_thirty_temps_kid, thirty_temps_df["KID_inf"]], axis=1
         )
         all_forty_steps_kid = pd.concat(
             [all_forty_steps_kid, forty_steps_df["KID_inf"]], axis=1
@@ -1184,10 +1193,10 @@ for i in range(3):
 
 
 # Extract final values
-final_thirty_temps_var = all_thiry_temps_grad_var.iloc[-1]
+final_thirty_temps_var = all_thirty_temps_grad_var.iloc[-1]
 final_forty_steps_var = all_forty_steps_grad_var.iloc[-1]
 final_eta_steps_var = all_eta_steps_grad_var.iloc[-1]
-final_thiry_temps_kid = all_thiry_temps_kid.iloc[-1]
+final_thirty_temps_kid = all_thirty_temps_kid.iloc[-1]
 final_forty_steps_kid = all_forty_steps_kid.iloc[-1]
 final_eta_steps_kid = all_eta_steps_kid.iloc[-1]
 
@@ -1283,9 +1292,9 @@ reg_points_three = reg_points_three[~(reg_points_three["KID_inf"] > mean + 10 * 
 # Plot error bars for new data
 plt.errorbar(
     final_thirty_temps_var["Train Grad Var"].mean(),
-    final_thiry_temps_kid["KID_inf"].mean(),
+    final_thirty_temps_kid["KID_inf"].mean(),
     xerr=final_thirty_temps_var["Train Grad Var"].std(),
-    yerr=final_thiry_temps_kid["KID_inf"].std(),
+    yerr=final_thirty_temps_kid["KID_inf"].std(),
     label=r"$p=0.1, N_t=30, K_{\mathbf{z}|\mathbf{x},t}=20$",
     capsize=2,
     marker="x",
@@ -1507,6 +1516,175 @@ axs[0].legend(loc="upper right")
 axs[1].legend(loc="upper right")
 axs[2].legend(loc="lower right")
 
+#2 dp ticks
+axs[0].yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+axs[1].yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+axs[2].yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+
+axs[0].xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+axs[1].xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+axs[2].xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
 
 plt.tight_layout()
 plt.savefig(f"results/{DATA_NAME}/relationships/kid_var_error_subplots.png")
+
+# Plot extra data on kid vs grad var plot
+
+fig, axs = plt.subplots(1, 3, figsize=(24,8))
+
+sns.regplot(
+    x="Train Grad Var",
+    y="KID_inf",
+    data=reg_points_two,
+    scatter=False,
+    order=2,
+    truncate=False,
+    ax=axs[0],
+    color="gray",
+)
+sns.regplot(
+    x="Train Grad Var",
+    y="KID_inf",
+    data=reg_points_two,
+    scatter=False,
+    order=2,
+    truncate=False,
+    ax=axs[1],
+    color="gray",
+)
+sns.regplot(
+    x="Train Grad Var",
+    y="KID_inf",
+    data=reg_points_two,
+    scatter=False,
+    order=2,
+    truncate=False,
+    ax=axs[2],
+    color="gray",
+)
+# Plot original data in gray as scatter
+for temp in TEMPS:
+    if temp == 0.1 or temp == 0.3 or temp == 1:
+        label = r"p=" + f"{temp}" if temp != 0 else r"Vanilla Model"
+        plot_label = (
+            r"p=" + f"{temp}" + r", $N_{batch}=75$"
+            if temp != 0
+            else r"Vanilla Model, $N_{batch}=75$"
+        )
+
+        mean_kid = kid_var[kid_var["temp"] == label]["KID_inf"].mean()
+        std_kid = kid_var[kid_var["temp"] == label]["KID_inf"].std()
+        mean_var = kid_var[kid_var["temp"] == label]["Train Grad Var"].mean()
+        std_var = kid_var[kid_var["temp"] == label]["Train Grad Var"].std()
+
+        for ax in axs:
+            ax.errorbar(
+                mean_var,
+                mean_kid,
+                xerr=std_var,
+                yerr=std_kid,
+                capsize=2,
+                marker="x",
+                color="gray"
+            )
+
+        # if p=0.1, place a circle around the point
+        if temp == 0.1:
+            for ax in axs:
+                ax.add_patch(
+                    patches.Ellipse(
+                        (mean_var, mean_kid),
+                        width=0.1,
+                        height=0.005,
+                        edgecolor="black",
+                        facecolor="none",
+                    )
+                )
+                ax.text(
+                    mean_var+0.2,
+                    mean_kid-0.005,
+                    r"Previous $p=0.1$",
+                    fontsize=15,
+                    horizontalalignment="right",
+                )
+
+
+# Error bars
+axs[0].errorbar(
+    final_forty_steps_var["Train Grad Var"].mean(),
+    final_forty_steps_kid["KID_inf"].mean(),
+    xerr=final_forty_steps_var["Train Grad Var"].std(),
+    yerr=final_forty_steps_kid["KID_inf"].std(),
+    label=r"$p=0.1, N_t=10, K_{\mathbf{z}|\mathbf{x},t}=40$",
+    capsize=2,
+    marker="x",
+    color=custom_colors[-2],
+)
+
+axs[1].errorbar(
+    final_thirty_temps_var["Train Grad Var"].mean(),
+    final_thirty_temps_kid["KID_inf"].mean(),
+    xerr=final_thirty_temps_var["Train Grad Var"].std(),
+    yerr=final_thirty_temps_kid["KID_inf"].std(),
+    label=r"$p=0.1, N_t=30, K_{\mathbf{z}|\mathbf{x},t}=20$",
+    capsize=2,
+    marker="x",
+    color=custom_colors[-1],
+)
+
+axs[2].errorbar(
+    final_eta_steps_var["Train Grad Var"].mean(),
+    final_eta_steps_kid["KID_inf"].mean(),
+    xerr=final_eta_steps_var["Train Grad Var"].std(),
+    yerr=final_eta_steps_kid["KID_inf"].std(),
+    label=r"$p=0.1, N_t=10, K_{\mathbf{z}|\mathbf{x},t}=20, \eta=2.0$",
+    capsize=2,
+    marker="x",
+    color=custom_colors[-3],
+)
+
+# Labels
+axs[0].set_xlabel(
+    r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p_\theta(\mathbf{x}))\right]$"
+)
+axs[0].set_ylabel(r"$\overline{KID}_\infty$")
+axs[0].set_title(r"Increased Posterior MCMC Steps, $K_{\mathbf{z}|\mathbf{x},t}$")
+axs[1].set_xlabel(
+    r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p_\theta(\mathbf{x}))\right]$"
+)
+axs[1].set_ylabel(r"$\overline{KID}_\infty$")
+axs[1].set_title(r"Increased Number of Temperatures, $N_t$")
+axs[2].set_xlabel(
+    r"$\mathrm{Var}_\theta\left[\nabla_\theta \log(p_\theta(\mathbf{x}))\right]$"
+)
+axs[2].set_ylabel(r"$\overline{KID}_\infty$")
+axs[2].set_title(r"Increased Weighting, $\eta$")
+
+axs[0].legend(loc="lower right")
+axs[1].legend(loc="lower right")
+axs[2].legend(loc="lower right")
+
+#2 dp ticks
+axs[0].yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+axs[1].yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+axs[2].yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+
+axs[0].xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+axs[1].xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+axs[2].xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+
+xlim = (0.15, 1.0)
+ylim = (0.05, 0.09)
+
+axs[0].set_xlim(xlim)
+axs[1].set_xlim(xlim)
+axs[2].set_xlim(xlim)
+
+axs[0].set_ylim(ylim)
+axs[1].set_ylim(ylim)
+axs[2].set_ylim(ylim)
+
+plt.tight_layout()
+plt.savefig(f"results/{DATA_NAME}/relationships/kid_var_error_extra_subplots.png")
+
+

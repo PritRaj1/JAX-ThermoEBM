@@ -8,7 +8,7 @@ parser = configparser.ConfigParser()
 parser.read("hyperparams.ini")
 
 # Set plot styling
-sns.set(font_scale=1.1)
+sns.set(font_scale=1.75)
 sns.set_style("whitegrid", rc ={'text.usetex' : True, 'font.family' : 'serif', 'font.serif' : ['Computer Modern']})
 
 begin = int(parser["LR_SCHEDULE"]["BEGIN_EPOCH"]) * int(parser["PIPELINE"]["NUM_TRAIN_DATA"])/int(parser["PIPELINE"]["BATCH_SIZE"])
@@ -39,11 +39,43 @@ for p in p_list:
     temp = np.linspace(0, 1, num_temps) ** p
     label = "p = {}".format(p)
     plt.plot(temp, label=label, color=temp_colors[p_list.index(p)])
-plt.xlabel("Schedule Index")
-plt.ylabel("Temperature")
+plt.xlabel("Schedule/Summation Index, $i$")
+plt.ylabel("Temperature, $t_i$")
 plt.title("Temperature Schedule")
 plt.legend(loc="upper left")
 plt.savefig("results/temperature_schedule.png")
 
-print(LR_schedule(steps[-1]))
+reduced_p = [0.3, 1, 3]
+reduced_temps = [temp_colors[1], temp_colors[3], temp_colors[5]]
+num_temps = 30
+
+def y_function(x):
+    return (x - x ** 2) * np.exp(x)
+t = np.linspace(0, 1, 100) 
+
+# Plot discretsised integral
+for p, color in zip(reduced_p, reduced_temps):
+    plt.figure(figsize=(10, 6))
+    plt.plot(t, y_function(t), label=r"Arbitrary Integrand, $E_i$", color="maroon")
+    plt.fill_between(t, y_function(t), alpha=0.2, color=color, label=r"Area")
+    temps = np.linspace(0, 1, num_temps) ** p
+    for i in range(num_temps):
+        if i == 0:
+            label = "Discretisation: p = {}".format(p) 
+        else:
+            label = None
+        plt.vlines(temps[i], 0, y_function(temps[i]), color="black", label=label)
+    plt.xlabel(r"Temperature $t_i$")
+    plt.ylabel(r"Arbitrary Integrand, $E_i$")
+    plt.title("Discretised Integral")
+    plt.legend(loc="upper left")
+    plt.xlim(0, 1)
+    plt.ylim(0, 1)
+    plt.tight_layout()
+    plt.savefig("results/temperature_schedule_{}.png".format(p))
+
+
+
+
+
 
