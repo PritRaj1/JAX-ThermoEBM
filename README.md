@@ -170,7 +170,7 @@ This is how we parameterised the learning gradient variance. Different temperatu
 
 - Prof. Mark Girolami
 - Mr. Justin Bunker
-- [The Computational Statistics and Machine Learning Group](Computational Statistics and Machine Learning Group)
+- [The Computational Statistics and Machine Learning Group](https://csml-cam.github.io/)
 - Cambridge University Engineering Department
 - Emmanuel College, the University of Cambridge
 
