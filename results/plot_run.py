@@ -1637,7 +1637,7 @@ for temp in TEMPS:
 
         # if p=0.1, place a circle around the point
         if temp == 0.1:
-            for ax in axs:
+            for idx, ax in enumerate(axs):
                 ax.add_patch(
                     patches.Ellipse(
                         (mean_var, mean_kid),
@@ -1647,13 +1647,22 @@ for temp in TEMPS:
                         facecolor="none",
                     )
                 )
-                ax.text(
-                    mean_var+0.2,
-                    mean_kid-0.005,
-                    r"Previous $p=0.1$",
-                    fontsize=15,
-                    horizontalalignment="right",
-                )
+                if idx < 2:
+                    ax.text(
+                        mean_var+0.2,
+                        mean_kid-0.005,
+                        r"Previous $p=0.1$",
+                        fontsize=15,
+                        horizontalalignment="right",
+                    )
+                else:
+                    ax.text(
+                        mean_var+0.2,
+                        mean_kid+0.005,
+                        r"Previous $p=0.1$",
+                        fontsize=15,
+                        horizontalalignment="right",
+                    )
 
 
 # Error bars
@@ -1668,7 +1677,7 @@ axs[0].errorbar(
     color=custom_colors[-2],
 )
 
-ax[1].errorbar(
+axs[1].errorbar(
     final_twenty_temps_var["Train Grad Var"].mean(),
     final_twenty_temps_kid["KID_inf"].mean(),
     xerr=final_twenty_temps_var["Train Grad Var"].std(),
