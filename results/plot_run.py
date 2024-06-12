@@ -1150,30 +1150,43 @@ plt.savefig(f"results/{DATA_NAME}/relationships/power_grad_var.png")
 # Plot thirty temps and forty steps on original kid vs grad var plot
 
 thirty_temps_path = f"extra_logs/CelebA/temps=30/p=0.1/batch=75"
+twenty_temps_path = f"extra_logs/CelebA/temps=20/p=0.1/batch=75"
 forty_steps_path = f"extra_logs/CelebA/posterior_mcmc=40/p=0.1/batch=75"
 eta_two_path = f"extra_logs/CelebA/beta=2.0/p=0.1/batch=75"
+eta_four_path = f"extra_logs/CelebA/beta=4.0/p=0.1/batch=75"
 
 for i in range(NUM_EXPERIMENTS):
     thirty_temps_df = pd.read_csv(f"{thirty_temps_path}/experiment{i}.csv")
+    twenty_temps_df = pd.read_csv(f"{twenty_temps_path}/experiment{i}.csv")
     forty_steps_df = pd.read_csv(f"{forty_steps_path}/experiment{i}.csv")
     eta_two_df = pd.read_csv(f"{eta_two_path}/experiment{i}.csv")
+    eta_four_df = pd.read_csv(f"{eta_four_path}/experiment{i}.csv")
 
     thirty_temps_df["temp"] = "p=0.1"
+    twenty_temps_df["temp"] = "p=0.1"
     forty_steps_df["temp"] = "p=0.1"
     eta_two_df["temp"] = "p=0.1"
+    eta_four_df["temp"] = "p=0.1"
 
     if i == 0:
         all_thirty_temps_grad_var = thirty_temps_df["Train Grad Var"]
+        all_twenty_temps_grad_var = twenty_temps_df["Train Grad Var"]
         all_forty_steps_grad_var = forty_steps_df["Train Grad Var"]
         all_eta_steps_grad_var = eta_two_df["Train Grad Var"]
+        all_etafour_steps_grad_var = eta_four_df["Train Grad Var"]
         all_thirty_temps_kid = thirty_temps_df["KID_inf"]
+        all_twenty_temps_kid = twenty_temps_df["KID_inf"]
         all_forty_steps_kid = forty_steps_df["KID_inf"]
         all_eta_steps_kid = eta_two_df["KID_inf"]
+        all_etafour_steps_kid = eta_four_df["KID_inf"]
         epochs = df["Epoch"]
 
     else:
         all_thirty_temps_grad_var = pd.concat(
             [all_thirty_temps_grad_var, thirty_temps_df["Train Grad Var"]], axis=1
+        )
+        all_twenty_temps_grad_var = pd.concat(
+            [all_twenty_temps_grad_var, twenty_temps_df["Train Grad Var"]], axis=1
         )
         all_forty_steps_grad_var = pd.concat(
             [all_forty_steps_grad_var, forty_steps_df["Train Grad Var"]], axis=1
@@ -1181,8 +1194,14 @@ for i in range(NUM_EXPERIMENTS):
         all_eta_steps_grad_var = pd.concat(
             [all_eta_steps_grad_var, eta_two_df["Train Grad Var"]], axis=1
         )
+        all_etafour_steps_grad_var = pd.concat(
+            [all_etafour_steps_grad_var, eta_four_df["Train Grad Var"]], axis=1
+        )
         all_thirty_temps_kid = pd.concat(
             [all_thirty_temps_kid, thirty_temps_df["KID_inf"]], axis=1
+        )
+        all_twenty_temps_kid = pd.concat(
+            [all_twenty_temps_kid, twenty_temps_df["KID_inf"]], axis=1
         )
         all_forty_steps_kid = pd.concat(
             [all_forty_steps_kid, forty_steps_df["KID_inf"]], axis=1
@@ -1190,15 +1209,23 @@ for i in range(NUM_EXPERIMENTS):
         all_eta_steps_kid = pd.concat(
             [all_eta_steps_kid, eta_two_df["KID_inf"]], axis=1
         )
+        all_etafour_steps_kid = pd.concat(
+            [all_etafour_steps_kid, eta_four_df["KID_inf"]], axis=1
+        )
+
 
 
 # Extract final values
 final_thirty_temps_var = all_thirty_temps_grad_var.iloc[-1]
+final_twenty_temps_var = all_twenty_temps_grad_var.iloc[-1]
 final_forty_steps_var = all_forty_steps_grad_var.iloc[-1]
 final_eta_steps_var = all_eta_steps_grad_var.iloc[-1]
+final_etafour_steps_var = all_etafour_steps_grad_var.iloc[-1]
 final_thirty_temps_kid = all_thirty_temps_kid.iloc[-1]
+final_twenty_temps_kid = all_twenty_temps_kid.iloc[-1]
 final_forty_steps_kid = all_forty_steps_kid.iloc[-1]
 final_eta_steps_kid = all_eta_steps_kid.iloc[-1]
+final_etafour_steps_kid = all_etafour_steps_kid.iloc[-1]
 
 plt.figure(figsize=(16, 11))
 reg_points = []
@@ -1298,7 +1325,17 @@ plt.errorbar(
     label=r"$p=0.1, N_t=30, K_{\mathbf{z}|\mathbf{x},t}=20$",
     capsize=2,
     marker="x",
-    color=custom_colors[-1],
+    color=cm.magma(80 / 256),
+)
+plt.errorbar(
+    final_twenty_temps_var["Train Grad Var"].mean(),
+    final_twenty_temps_kid["KID_inf"].mean(),
+    xerr=final_twenty_temps_var["Train Grad Var"].std(),
+    yerr=final_twenty_temps_kid["KID_inf"].std(),
+    label=r"$p=0.1, N_t=20, K_{\mathbf{z}|\mathbf{x},t}=20$",
+    capsize=2,
+    marker="x",
+    color=cm.magma(150 / 256),
 )
 plt.errorbar(
     final_forty_steps_var["Train Grad Var"].mean(),
@@ -1318,7 +1355,17 @@ plt.errorbar(
     label=r"$p=0.1, N_t=10, K_{\mathbf{z}|\mathbf{x},t}=20, \eta=2.0$",
     capsize=2,
     marker="x",
-    color=custom_colors[-3],
+    color=cm.cool(0 / 256),
+)
+plt.errorbar(
+    final_etafour_steps_var["Train Grad Var"].mean(),
+    final_etafour_steps_kid["KID_inf"].mean(),
+    xerr=final_etafour_steps_var["Train Grad Var"].std(),
+    yerr=final_etafour_steps_kid["KID_inf"].std(),
+    label=r"$p=0.1, N_t=10, K_{\mathbf{z}|\mathbf{x},t}=20, \eta=4.0$",
+    capsize=2,
+    marker="x",
+    color=cm.cool(100/256),
 )
 sns.regplot(
     x="Train Grad Var",
@@ -1621,6 +1668,17 @@ axs[0].errorbar(
     color=custom_colors[-2],
 )
 
+ax[1].errorbar(
+    final_twenty_temps_var["Train Grad Var"].mean(),
+    final_twenty_temps_kid["KID_inf"].mean(),
+    xerr=final_twenty_temps_var["Train Grad Var"].std(),
+    yerr=final_twenty_temps_kid["KID_inf"].std(),
+    label=r"$p=0.1, N_t=20, K_{\mathbf{z}|\mathbf{x},t}=20$",
+    capsize=2,
+    marker="x",
+    color=cm.magma(150 / 256),
+)
+
 axs[1].errorbar(
     final_thirty_temps_var["Train Grad Var"].mean(),
     final_thirty_temps_kid["KID_inf"].mean(),
@@ -1629,7 +1687,7 @@ axs[1].errorbar(
     label=r"$p=0.1, N_t=30, K_{\mathbf{z}|\mathbf{x},t}=20$",
     capsize=2,
     marker="x",
-    color=custom_colors[-1],
+    color=cm.magma(80 / 256),
 )
 
 axs[2].errorbar(
@@ -1640,7 +1698,18 @@ axs[2].errorbar(
     label=r"$p=0.1, N_t=10, K_{\mathbf{z}|\mathbf{x},t}=20, \eta=2.0$",
     capsize=2,
     marker="x",
-    color=custom_colors[-3],
+    color=cm.cool(0 / 256),
+)
+
+axs[2].errorbar(
+    final_etafour_steps_var["Train Grad Var"].mean(),
+    final_etafour_steps_kid["KID_inf"].mean(),
+    xerr=final_etafour_steps_var["Train Grad Var"].std(),
+    yerr=final_etafour_steps_kid["KID_inf"].std(),
+    label=r"$p=0.1, N_t=10, K_{\mathbf{z}|\mathbf{x},t}=20, \eta=4.0$",
+    capsize=2,
+    marker="x",
+    color=cm.cool(100/256),
 )
 
 # Labels
