@@ -47,7 +47,7 @@ Yes. Learning gradient variance is very important. It is reflective of the explo
 However, it has to be evaluated using stochastic approximation approaches, therefore in reality...
 
 ```math
-\left[ \nabla_\theta \mathcal{L}(\theta, \mathbf{x}) \right] \quad \text{is a distribution!}
+\mathrm{Var}_\theta\left[\nabla_\theta \mathcal{L}(\theta, \mathbf{x})\right] \quad \text{is a distribution!}
 ```
 
 We argue that adopting a distributional standpoint regarding a neural network's learning process, and being able to shape the form of its learning gradient distribution are important steps towards improving optimisation efficiency, generalisation, and generative capacity. To demonstrate this, here are some artificially generated images, with their corresponding learning gradients captioned underneath:
