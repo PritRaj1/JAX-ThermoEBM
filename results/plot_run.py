@@ -1674,7 +1674,7 @@ axs[0].errorbar(
     label=r"$p=0.1, N_t=10, K_{\mathbf{z}|\mathbf{x},t}=40$",
     capsize=2,
     marker="x",
-    color=custom_colors[-2],
+    color=cm.magma(210 / 256),
 )
 
 axs[1].errorbar(
