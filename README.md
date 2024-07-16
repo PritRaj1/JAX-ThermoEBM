@@ -47,10 +47,10 @@ Yes. Learning gradient variance is very important. It is reflective of the explo
 However, it has to be evaluated using stochastic approximation approaches, therefore in reality...
 
 ```math
-\mathrm{Var}_\theta\left[\nabla_\theta \mathcal{L}(\theta, \mathbf{x})\right] \quad \text{is a distribution!}
+\nabla_\theta \mathcal{L}(\theta, \mathbf{x}) \quad \text{is a distribution!}
 ```
 
-We argue that adopting a distributional standpoint regarding a neural network's learning process, and being able to shape the form of its learning gradient distribution are important steps towards improving optimisation efficiency, generalisation, and generative capacity. To demonstrate this, here are some artificially generated images, with their corresponding learning gradients captioned underneath:
+We argue that adopting a distributional standpoint regarding a neural network's learning process, and being able to shape the form of its learning gradient distribution are important steps towards improving optimisation efficiency, generalisation, and generative capacity. Shaping a distribution is intuitively accomplished by altering its variance. To demonstrate this, here are some artificially generated images, with their corresponding learning gradient variances captioned underneath:
 
 <p align="center">
 <img src="https://github.com/PritRaj1/JAX-ThermoEBM/assets/77790119/b526520f-4d92-4eb2-a458-3b0224678a6b" width="50%">
@@ -59,7 +59,7 @@ We argue that adopting a distributional standpoint regarding a neural network's 
 As you can see, increasing learning gradient variance improves image fidelity **until a minimum is achieved**, (so long as mode collapse has not occurred). Increasing further beyond this worsens image quality. Previous attempts at shaping the distribution of the learning gradient have sought or provided expressions to reduce or minimise variance, (see [Calderhead and Girolami (2009)](https://www.sciencedirect.com/science/article/pii/S0167947309002722) and [Faghri et al. (2007)](https://arxiv.org/abs/2007.04532)). This would make sense if the learning gradient had an analytic form, since minimising variance is akin to minimising error. However, instead...
 
 ```math
-\mathrm{Var}_\theta\left[\nabla_\theta \mathcal{L}(\theta, \mathbf{x})\right] \quad \text{is a distribution!}
+\nabla_\theta \mathcal{L}(\theta, \mathbf{x}) \quad \text{is a distribution!}
 ```
 
 This was one of the demonstrated findings of the report, which persisted across datasets:
