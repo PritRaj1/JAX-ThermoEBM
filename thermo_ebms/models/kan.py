@@ -11,13 +11,15 @@ from ..config import KAEMConfig
 
 def kernel(
 	z: jax.Array,
-	centres: jax.Array,
+	translation: jax.Array,
 	bandwidth: jax.Array,
 	tau: jax.Array,
 ) -> jax.Array:
-	"""Gaussian RBF latent density"""
-	z_scaled = (z - centres) / bandwidth
-	return jnp.sum(tau * jnp.exp(-(z_scaled**2) / 2), axis=1, keepdims=True)
+	"""Morelet Wavelet latent density"""
+	z_scaled = (z - translation) / bandwidth
+	real = jnp.cos(tau * z_scaled) - jnp.exp(-(tau**2) / 2)
+	envelope = jnp.exp(-(z_scaled**2) / 2)
+	return real * envelope
 
 
 def expand_z(x: np.ndarray) -> jax.Array:
@@ -31,7 +33,7 @@ def vmap_component(function: Callable, x: jax.Array) -> jax.Array:
 class KAN(nnx.Module):
 	"""1D latent density function"""
 
-	init_domain: tuple[float, float] = (-3.0, 3.0)
+	init_domain: tuple[float, float] = (-12.0, 12.0)
 
 	def __init__(self, config: KAEMConfig, P: int, rngs: nnx.Rngs):
 		self.mixture = config.mixture
@@ -41,18 +43,9 @@ class KAN(nnx.Module):
 		self.Q = (P - 1) // 2 if self.mixture else 2 * P + 1
 		self.P = P
 
-		numcentres = config.numcentres
-		centres = jnp.reshape(
-			jnp.linspace(*self.init_domain, num=numcentres), (1, numcentres, 1, 1)
-		)
-		self.centres = nnx.Param(
-			jnp.broadcast_to(
-				centres,
-				(1, numcentres, self.Q, self.P),
-			)
-		)
-		self.bandwidth = nnx.Param(rngs.normal((1, numcentres, self.Q, P)))
-		self.tau = nnx.Param(rngs.normal((1, numcentres, self.Q, P)))
+		self.translation = nnx.Param(rngs.normal((1, 1, self.Q, P)))
+		self.bandwidth = nnx.Param(rngs.normal((1, 1, self.Q, P)))
+		self.tau = nnx.Param(rngs.normal((1, 1, self.Q, P)))
 
 		# Mixture component to sample
 		self.reg = config.mixture_regularization
@@ -136,7 +129,7 @@ class KAN(nnx.Module):
 		self,
 		z: jax.Array,
 	) -> jax.Array:
-		return kernel(z, self.centres, self.bandwidth, self.tau)
+		return kernel(z, self.translation, self.bandwidth, self.tau)
 
 	def en(self, z: jax.Array) -> jax.Array:
 		f = self(z)
@@ -155,11 +148,11 @@ class KAN(nnx.Module):
 		In: (numsamples, 1, Q, P)
 		Out: (num_quad, numsamples, 1, P) if mixture else (numquad, numsamples, Q, P))
 		"""
-		centres = self.select_component(self.centres)
+		translation = self.select_component(self.translation)
 		bandwidth = self.select_component(self.bandwidth)
 		tau = self.select_component(self.tau)
 		z = self.select_component(z)
-		return kernel(z, centres, bandwidth, tau)
+		return kernel(z, translation, bandwidth, tau)
 
 	def loss(self, z_post: jax.Array, z_prior: jax.Array) -> jax.Array:
 		"""Constrastive divergence: E_{p_θ(z | x)}[f(z)] - E_{p_α(z)}[f(z)]"""

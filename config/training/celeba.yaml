@@ -1,6 +1,6 @@
 dataset: celeb_a
 epochs: 50
-global_batch_size: 64
+global_batch_size: 32
 image_res: 64
 importance_finetune:
   type: residual
