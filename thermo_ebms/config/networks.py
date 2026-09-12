@@ -32,7 +32,6 @@ class GENConfig:
 	gaussian_stddev: float = 0.3
 	groupnorm: bool = False
 	mcmc: ULAConfig = field(default_factory=ULAConfig)
-	leakyrelu_leak: float = 0.1
 	blocks: Sequence[ConvBlock] = field(
 		default_factory=lambda: [
 			ConvBlock(

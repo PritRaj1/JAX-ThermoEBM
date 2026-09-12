@@ -6,17 +6,24 @@ from ..config import AdamWConfig, OptConfig
 
 
 def network_opt(config: AdamWConfig, total_steps: int) -> Callable:
-	schedule = optax.cosine_decay_schedule(
-		init_value=config.lr_init,
+	warmup_steps = int(config.warmup_fraction * total_steps)
+
+	schedule = optax.warmup_cosine_decay_schedule(
+		init_value=0.0,
+		peak_value=config.lr_init,
+		warmup_steps=warmup_steps,
 		decay_steps=total_steps,
-		alpha=config.lr_end / config.lr_init,
+		end_value=config.lr_end,
 	)
 
-	return optax.adamw(
-		learning_rate=schedule,
-		b1=config.beta1,
-		b2=config.beta2,
-		weight_decay=config.weight_decay,
+	return optax.chain(
+		optax.clip_by_global_norm(1.0),
+		optax.adamw(
+			learning_rate=schedule,
+			b1=config.beta1,
+			b2=config.beta2,
+			weight_decay=config.weight_decay,
+		),
 	)
 
 

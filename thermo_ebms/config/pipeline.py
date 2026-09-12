@@ -51,6 +51,7 @@ class AdamWConfig:
 	weight_decay: float = 0.0001
 	beta1: float = 0.999
 	beta2: float = 0.9
+	warmup_fraction: float = 0.2
 
 
 @dataclass
