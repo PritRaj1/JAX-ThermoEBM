@@ -31,7 +31,7 @@ def vmap_component(function: Callable, x: jax.Array) -> jax.Array:
 class KAN(nnx.Module):
 	"""1D latent density function"""
 
-	init_domain: tuple[float, float] = (-6.0, 6.0)
+	init_domain: tuple[float, float] = (-10.0, 10.0)
 
 	def __init__(self, config: KAEMConfig, P: int, rngs: nnx.Rngs):
 		self.mixture = config.mixture
@@ -155,11 +155,35 @@ class KAN(nnx.Module):
 		z = self.select_component(z)
 		return kernel(z, translation, bandwidth, tau)
 
+	def mix_reg(self) -> jax.Array:
+		"""Penalise overlap between mixture components"""
+		f = vmap_component(self.componentwise_f, self.nodes)
+		z = vmap_component(self.select_component, self.nodes)
+		weights = vmap_component(self.select_component, self.weights)
+
+		pdf = jnp.exp(f + self.log_p0(z))
+		Z = jnp.sum(weights * pdf, axis=0, keepdims=True)
+		pdf = pdf / jnp.maximum(Z, 1e-8)
+
+		# Pairwise overlap: ∫ min(p_i(z), p_j(z)) dz.
+		pdf_i = pdf[..., :, None]
+		pdf_j = pdf[..., None, :]
+		overlap = jnp.sum(
+			weights[..., :, None] * jnp.minimum(pdf_i, pdf_j),
+			axis=0,
+		)
+
+		# Expectation over distinct pairs
+		mask = jnp.triu(jnp.ones((self.P, self.P)), k=1)
+		return jnp.sum(overlap * mask) / (
+			overlap.shape[0] * self.Q * (self.P * (self.P - 1) / 2)
+		)
+
 	def loss(self, z_post: jax.Array, z_prior: jax.Array) -> jax.Array:
 		"""Constrastive divergence: E_{p_θ(z | x)}[f(z)] - E_{p_α(z)}[f(z)]"""
 		reg = 0
 		if self.mixture:
-			reg = self.reg * jnp.sum(jnp.abs(self.alpha))
+			reg = self.reg * self.mix_reg()
 
 		return -self.en(z_post) + self.en(z_prior) + reg * z_prior.shape[0]
 
