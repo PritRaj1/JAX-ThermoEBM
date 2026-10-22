@@ -17,7 +17,7 @@ def pairwise_sqdist(xi: jax.Array, xj: jax.Array) -> jax.Array:
 
 class ImportanceTuner(nnx.Module):
 	def __init__(self, resampler_type: str):
-		self.resampler = resampler_map.get(resampler_type, "residual")
+		self.resampler = resampler_map.get(resampler_type, resampling.residual)
 
 	def logllhood(self, model: nnx.Module, z: jax.Array, x: jax.Array) -> jax.Array:
 		x_pred = model.gen(z)

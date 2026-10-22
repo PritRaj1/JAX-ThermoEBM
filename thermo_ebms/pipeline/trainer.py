@@ -31,7 +31,7 @@ def to_uint8(x: jax.Array) -> np.ndarray:
 	return x.astype(np.uint8)
 
 
-def loss_fn(
+def mle_loss(
 	m: nnx.Module, x: jax.Array, z_post: jax.Array, z_prior: jax.Array
 ) -> jax.Array:
 	return m.loss(x, z_post, z_prior)
@@ -44,7 +44,7 @@ def update(
 	z_post: jax.Array,
 	z_prior: jax.Array,
 ) -> tuple[jax.Array, jax.Array]:
-	loss, grads = nnx.value_and_grad(loss_fn)(state.model, x, z_post, z_prior)
+	loss, grads = nnx.value_and_grad(mle_loss)(state.model, x, z_post, z_prior)
 	state.update(grads)
 	grad_norm = jnp.sqrt(
 		sum(jnp.sum(jnp.square(g)) for g in jax.tree_util.tree_leaves(grads))
@@ -52,6 +52,7 @@ def update(
 	return loss, grad_norm
 
 
+@nnx.jit
 def update_importance(
 	state: nnx.ModelAndOptimizer,
 	tuner: ImportanceTuner,
