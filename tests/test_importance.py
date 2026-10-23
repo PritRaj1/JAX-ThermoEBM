@@ -16,13 +16,12 @@ def test_mle_finite():
 
 	z_prior = model.sample_prior(key, x.shape[0])
 	subkeys = jax.random.split(key, x.shape[0])
-	idx = tuner.batch_resample(subkeys, model, z_prior, x)
-	z_post = z_prior[idx].reshape(-1, *z_prior.shape[1:])
-	x_new = jnp.repeat(x, x.shape[0], axis=0)
+	idx, weights = tuner.batch_resample(subkeys, model, z_prior, x)
+	z_post = z_prior.at[idx].get()
 
-	loss = tuner(model, x_new, z_post, z_prior)
+	loss = tuner(model, weights, x, z_post, z_prior)
 	assert jnp.isfinite(loss)
-	assert z_post.shape == (x.shape[0] ** 2, 1, 1, cfg.model.z_dim)
+	assert z_post.shape == (x.shape[0], x.shape[0], 1, 1, cfg.model.z_dim)
 
 
 def test_kaem_finite():
@@ -33,10 +32,9 @@ def test_kaem_finite():
 
 	z_prior = model.sample_prior(key, x.shape[0])
 	subkeys = jax.random.split(key, x.shape[0])
-	idx = tuner.batch_resample(subkeys, model, z_prior, x)
-	z_post = z_prior[idx].reshape(-1, *z_prior.shape[1:])
-	x_new = jnp.repeat(x, x.shape[0], axis=0)
+	idx, weights = tuner.batch_resample(subkeys, model, z_prior, x)
+	z_post = z_prior.at[idx].get()
 
-	loss = tuner(model, x_new, z_post, z_prior)
+	loss = tuner(model, weights, x, z_post, z_prior)
 	assert jnp.isfinite(loss)
-	assert z_post.shape == (x.shape[0] ** 2, 1, inner_dim, cfg.model.z_dim)
+	assert z_post.shape == (x.shape[0], x.shape[0], 1, inner_dim, cfg.model.z_dim)

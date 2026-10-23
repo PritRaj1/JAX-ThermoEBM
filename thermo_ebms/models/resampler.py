@@ -32,17 +32,38 @@ class ImportanceTuner(nnx.Module):
 		self, subkeys: jax.Array, model: nnx.Module, z: jax.Array, x: jax.Array
 	) -> tuple[jax.Array, jax.Array, jax.Array]:
 		def resample_one(key, weights):
-			return self.resampler(key, weights, N)
+			return self.resampler(key, weights, z.shape[0])
 
-		N = z.shape[0]
 		ll = self.logllhood(model, z, x)
 		weights = jax.nn.softmax(ll, axis=-1)
-		return jax.vmap(resample_one)(subkeys, weights)
+		idx = jax.vmap(resample_one)(subkeys, weights)
+		weights = jnp.take_along_axis(weights, idx, axis=1)
+		return idx, jax.nn.softmax(weights, axis=-1)
 
 	def __call__(
-		self, model: jax.Array, x: jax.Array, z_post: jax.Array, z_prior: jax.Array
+		self,
+		model: jax.Array,
+		weights: jax.Array,
+		x: jax.Array,
+		z_post: jax.Array,
+		z_prior: jax.Array,
 	) -> jax.Array:
-		num_samples = x.shape[0]
-		contrastive_div = model.ebm.loss(z_post, z_prior) / num_samples
-		recon = model.gen.loss(x, z_post) / num_samples
-		return contrastive_div + recon
+		N = x.shape[0]
+
+		# IS weighed expected log-likelihood
+		x_gen = jax.vmap(model.gen)(z_post)
+		se = jnp.sum(
+			((jnp.expand_dims(x, axis=1) - x_gen) ** 2),
+			axis=tuple(range(2, x.ndim + 1)),
+		)
+		ll = (weights * se).mean()
+
+		# IS weighed expected log-prior
+		def posterior_energy(z: jax.Array) -> jax.Array:
+			return jax.vmap(model.ebm.en)(z)
+
+		e_post = (weights * jax.vmap(posterior_energy)(z_post)).mean()
+		e_prior = model.ebm.en(z_prior) / N
+
+		contrastive_div = -e_post + e_prior
+		return contrastive_div + ll

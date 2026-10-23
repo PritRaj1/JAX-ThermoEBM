@@ -56,11 +56,12 @@ def update(
 def update_importance(
 	state: nnx.ModelAndOptimizer,
 	tuner: ImportanceTuner,
+	weights: jax.Array,
 	x: jax.Array,
 	z_post: jax.Array,
 	z_prior: jax.Array,
 ) -> tuple[jax.Array, jax.Array]:
-	loss, grads = nnx.value_and_grad(tuner)(state.model, x, z_post, z_prior)
+	loss, grads = nnx.value_and_grad(tuner)(state.model, weights, x, z_post, z_prior)
 	state.update(grads)
 	grad_norm = jnp.sqrt(
 		sum(jnp.sum(jnp.square(g)) for g in jax.tree_util.tree_leaves(grads))
@@ -255,16 +256,11 @@ class ebmTrainer:
 		with jax.set_mesh(self.mesh):
 			subkeys = jax.random.split(posterior_key, x.shape[0])
 			subkeys = jax.sharding.reshard(subkeys, NamedSharding(self.mesh, P("data")))
-			idx = self.tuner.batch_resample(subkeys, self.st.model, z_prior, x)
+			idx, weights = self.tuner.batch_resample(subkeys, self.st.model, z_prior, x)
 			z_post = z_prior.at[idx].get(out_sharding=P("data", None, None, None))
-			z_post = z_post.reshape(-1, *z_prior.shape[1:])
-			x = jnp.repeat(
-				x,
-				x.shape[0],
-				axis=0,
-				out_sharding=P("data", None, None, None),
+			loss, grad_norm = update_importance(
+				self.st, self.tuner, weights, x, z_post, z_prior
 			)
-			loss, grad_norm = update_importance(self.st, self.tuner, x, z_post, z_prior)
 
 		return loss, grad_norm, None, None, key
 
